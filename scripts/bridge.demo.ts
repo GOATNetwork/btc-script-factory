@@ -2,8 +2,8 @@ import BIP32Factory from 'bip32';
 import * as ecc from 'tiny-secp256k1';
 import ECPairFactory from 'ecpair';
 import {initEccLib, networks, payments, Psbt, Transaction} from 'bitcoinjs-lib';
-import * as bridge from "../bridge";
-import * as bridgeScript from "../bridge/utils/bridgeScript";
+import * as bridge from "../src/bridge";
+import * as bridgeScript from "../src/bridge/utils/bridgeScript";
 import {BitcoinCoreWallet} from "walletprovider-ts/lib/providers/bitcoin_core_wallet";
 import {buildDefaultBitcoinCoreWallet} from './wallet.setting'
 
