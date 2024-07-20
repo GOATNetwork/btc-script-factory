@@ -15,10 +15,11 @@
     "incremental": true
   },
   "paths": {
-    "@/*": ["./src/*"]
+    "@/*": ["./src/*", "./scripts/*"]
   },
   "include": [
-    "src/**/*.ts"
+    "src/**/*.ts",
+    "scripts/**/*.ts"
   ],
   "exclude": [
     "node_modules/**/*"

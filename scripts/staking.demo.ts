@@ -2,8 +2,8 @@ import BIP32Factory from 'bip32';
 import * as ecc from 'tiny-secp256k1';
 import ECPairFactory from 'ecpair';
 import {initEccLib, networks, payments, Psbt, Transaction} from 'bitcoinjs-lib';
-import * as staking from "../staking";
-import * as stakingScript from "../staking/utils/stakingScript";
+import * as staking from "../src/staking";
+import * as stakingScript from "../src/staking/utils/stakingScript";
 import {BitcoinCoreWallet} from "walletprovider-ts/lib/providers/bitcoin_core_wallet";
 import {buildDefaultBitcoinCoreWallet} from './wallet.setting'
 
