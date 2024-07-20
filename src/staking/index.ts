@@ -809,7 +809,7 @@ export function continueTimelockStakingTransaction(
     const timeBuffer = decompiled[timePosition] as Buffer;
     timelock = script.number.decode(timeBuffer);
   } else {
-    const wrap = decompiled[timePosition] % 16;
+    const wrap = decompiled[timePosition] as number % 16;
     timelock = wrap === 0 ? 16 : wrap;
   }
 
