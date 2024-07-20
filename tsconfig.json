@@ -6,7 +6,8 @@
     "skipLibCheck": true,
     "strict": true,
     "noEmit": false,
-    "outDir": "dist",
+    "outDir": "lib",
+    "declaration": true,
     "esModuleInterop": true,
     "moduleResolution": "node",
     "resolveJsonModule": true,
@@ -15,11 +16,10 @@
     "incremental": true
   },
   "paths": {
-    "@/*": ["./src/*", "./scripts/*"]
+    "@/*": ["./src/*"]
   },
   "include": [
-    "src/**/*.ts",
-    "scripts/**/*.ts"
+    "src/**/*.ts"
   ],
   "exclude": [
     "node_modules/**/*"

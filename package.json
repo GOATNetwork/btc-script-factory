@@ -18,7 +18,8 @@
   },
   "homepage": "https://github.com/GOATNetwork/btc-script-factory#readme",
   "files": [
-    "src"
+    "src",
+    "lib"
   ],
   "dependencies": {
     "@bitcoin-js/tiny-secp256k1-asmjs": "^2.2.3",
