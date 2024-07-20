@@ -4,7 +4,7 @@ import ECPairFactory from 'ecpair';
 import {initEccLib, networks, payments, Psbt, Transaction} from 'bitcoinjs-lib';
 import * as staking from "../staking";
 import * as stakingScript from "../staking/utils/stakingScript";
-import {BitcoinCoreWallet} from "walletprovider-ts/src/providers/bitcoin_core_wallet";
+import {BitcoinCoreWallet} from "walletprovider-ts/lib/providers/bitcoin_core_wallet";
 import {buildDefaultBitcoinCoreWallet} from './wallet.setting'
 
 const bip32 = BIP32Factory(ecc);

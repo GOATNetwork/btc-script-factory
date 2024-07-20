@@ -1,4 +1,4 @@
-import {BitcoinCoreWallet} from "walletprovider-ts/src/providers/bitcoin_core_wallet";
+import {BitcoinCoreWallet} from "walletprovider-ts/lib/providers/bitcoin_core_wallet";
 
 export function buildBitcoinCoreWallet(walletName: string) {
     let network = 'regtest';
