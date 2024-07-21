@@ -1,6 +1,6 @@
 {
   "name": "btc-script-factory",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -27,6 +27,7 @@
     "axios": "^1.7.2",
     "bech32": "^2.0.0",
     "bip174": "^2.1.1",
+    "secp256k1": "^5.0.0",
     "bitcoin-core": "^4.2.0",
     "bitcoinjs-lib": "6.1.5",
     "bs58check": "^3.0.1",

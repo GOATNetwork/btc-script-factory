@@ -312,3 +312,221 @@ function recaptureTransaction(
     fee: estimatedFee
   };
 }
+
+function createP2MS(pks: string[], m: number, network: networks.Network) {
+  const p2ms = payments.p2ms({
+    m: m,
+    pubkeys: pks.map(pk => Buffer.from(pk, 'hex')),
+    network: network,
+  });
+
+  const p2sh = payments.p2wsh({
+    redeem: p2ms,
+    network: network,
+  });
+
+  return {
+    address: p2sh.address,
+    redeemScript: p2ms.output,
+    p2sh: p2sh,
+  };
+}
+
+
+export function depositP2SHTransaction(
+  scripts: {
+    dataEmbedScript?: Buffer,
+  },
+  amount: number,
+  changeAddress: string,
+  inputUTXOs: UTXO[],
+  network: networks.Network,
+  feeRate: number,
+  pubKeys: string[],
+  m: number,
+) {
+  if (amount <= 0 || feeRate <= 0) {
+    throw new Error("Amount and fee rate must be bigger than 0");
+  }
+
+  const numOutputs = scripts.dataEmbedScript ? 3 : 2;
+  const p2ms = createP2MS(pubKeys, m, network);
+  const { selectedUTXOs, fee } = getDepositTxInputUTXOsAndFees(inputUTXOs, amount, feeRate, numOutputs);
+
+  const psbt = new Psbt({ network });
+  selectedUTXOs.forEach(input => {
+    psbt.addInput({
+      hash: input.txid,
+      index: input.vout,
+      witnessUtxo: {
+        script: Buffer.from(input.scriptPubKey, 'hex'),
+        value: input.value,
+      },
+      redeemScript: p2ms.redeemScript,
+    });
+  });
+
+  psbt.addOutput({
+    address: p2ms.address!,
+    value: amount,
+  });
+
+  if (scripts.dataEmbedScript) {
+    psbt.addOutput({
+      script: scripts.dataEmbedScript,
+      value: 0,
+    });
+  }
+
+  const inputsSum = inputValueSum(selectedUTXOs);
+  if ((inputsSum - (amount + fee)) > BTC_DUST_SAT) {
+    psbt.addOutput({
+      address: changeAddress,
+      value: inputsSum - (amount + fee),
+    });
+  }
+
+  return {
+    psbt,
+    fee,
+  };
+}
+
+export function sendP2SHTransaction(
+  depositTransaction: Transaction,
+  sendAddress: string,
+  minimumFee: number,
+  network: networks.Network,
+  outputIndex = 0,
+  pubKeys: string[],
+  m: number
+) {
+  if (minimumFee <= 0) {
+    throw new Error("Minimum fee must be bigger than 0");
+  }
+
+  const p2ms = createP2MS(pubKeys, m, network);
+
+  const psbt = new Psbt({ network });
+  psbt.addInput({
+    hash: depositTransaction.getHash(),
+    index: outputIndex,
+    witnessUtxo: {
+      value: depositTransaction.outs[0].value,
+      script: depositTransaction.outs[0].script,
+    },
+    witnessScript: p2ms.redeemScript, // Adding witnessScript here
+    // redeemScript: p2ms.redeemScript, // Make sure to NOT set scriptSig, it should be empty for witness inputs
+  });
+
+  psbt.addOutput({
+    address: sendAddress,
+    value: depositTransaction.outs[0].value - minimumFee,
+  });
+
+  return { psbt };
+}
+
+export function depositP2PKHTransaction(
+  scripts: {
+    dataEmbedScript?: Buffer,
+  },
+  amount: number,
+  changeAddress: string,
+  inputUTXOs: UTXO[],
+  network: networks.Network,
+  feeRate: number,
+  keyPair: any,
+) {
+  // Check that amount and fee are bigger than 0
+  if (amount <= 0 || feeRate <= 0) {
+    throw new Error("Amount and fee rate must be bigger than 0");
+  }
+
+  // Calculate the number of outputs based on the presence of the data embed script
+  // We have 2 outputs by default: deposit output and change output
+  const numOutputs = scripts.dataEmbedScript ? 3 : 2;
+  const { selectedUTXOs, fee } = getDepositTxInputUTXOsAndFees(
+    inputUTXOs, amount, feeRate, numOutputs
+  );
+
+  const { address } = payments.p2pkh({ pubkey: keyPair.publicKey, network });
+
+
+  const psbt = new Psbt({ network })
+
+  for (let i = 0; i < selectedUTXOs.length; ++i) {
+    const input = selectedUTXOs[i];
+    psbt.addInput({
+      hash: input.txid,
+      index: input.vout,
+      nonWitnessUtxo: Buffer.from(input.rawTransaction, 'hex'),
+      sequence: 0xfffffffd, // Enable locktime by setting the sequence value to (RBF-able)
+    });
+  }
+
+  psbt.addOutput({
+    address: address!,
+    value: amount,
+  });
+
+  if (scripts.dataEmbedScript) {
+    // Add the data embed output to the transaction
+    psbt.addOutput({
+      script: scripts.dataEmbedScript,
+      value: 0,
+    });
+  }
+
+  // Add a change output only if there's any amount leftover from the inputs
+  const inputsSum = inputValueSum(selectedUTXOs);
+  // Check if the change amount is above the dust limit, and if so, add it as a change output
+  // console.log(`${inputsSum} ${amount} ${fee}`);
+  if ((inputsSum - (amount + fee)) > BTC_DUST_SAT) {
+    psbt.addOutput({
+      address: changeAddress,
+      value: inputsSum - (amount + fee),
+    });
+  }
+
+  return {
+    psbt,
+    fee,
+  }
+}
+
+export function sendP2PKHTransaction(
+  depositTransaction: Transaction,
+  sendAddress: string,
+  minimumFee: number,
+  network: networks.Network,
+  outputIndex: number = 0,
+): { psbt: Psbt } {
+  const psbt = new Psbt({ network });
+
+  if (!depositTransaction.outs[outputIndex]) {
+    throw new Error("Invalid outputIndex: no such output in the transaction");
+  }
+
+  const output = depositTransaction.outs[outputIndex];
+
+  psbt.addInput({
+    hash: depositTransaction.getId(),
+    index: outputIndex,
+    nonWitnessUtxo: Buffer.from(depositTransaction.toHex(), 'hex'),
+  });
+
+  const inputAmount = output.value;
+
+  const outputAmount = inputAmount - minimumFee;
+  if (outputAmount <= 0) {
+    throw new Error("Output amount must be greater than 0 after fees");
+  }
+
+  psbt.addOutput({
+    address: sendAddress,
+    value: outputAmount,
+  });
+
+  return { psbt };
+}

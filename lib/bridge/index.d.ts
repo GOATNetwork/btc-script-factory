@@ -22,3 +22,21 @@ export declare function recaptureTransferTimelockTransaction(scripts: {
     transferScript: Buffer;
     dataEmbedScript?: Buffer;
 }, tx: Transaction, recaptureAddress: string, network: networks.Network, feeRate: number, outputIndex?: number): PsbtTransactionResult;
+export declare function depositP2SHTransaction(scripts: {
+    dataEmbedScript?: Buffer;
+}, amount: number, changeAddress: string, inputUTXOs: UTXO[], network: networks.Network, feeRate: number, pubKeys: string[], m: number): {
+    psbt: Psbt;
+    fee: number;
+};
+export declare function sendP2SHTransaction(depositTransaction: Transaction, sendAddress: string, minimumFee: number, network: networks.Network, outputIndex: number | undefined, pubKeys: string[], m: number): {
+    psbt: Psbt;
+};
+export declare function depositP2PKHTransaction(scripts: {
+    dataEmbedScript?: Buffer;
+}, amount: number, changeAddress: string, inputUTXOs: UTXO[], network: networks.Network, feeRate: number, keyPair: any): {
+    psbt: Psbt;
+    fee: number;
+};
+export declare function sendP2PKHTransaction(depositTransaction: Transaction, sendAddress: string, minimumFee: number, network: networks.Network, outputIndex?: number): {
+    psbt: Psbt;
+};
