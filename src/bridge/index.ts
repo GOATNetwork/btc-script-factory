@@ -508,21 +508,16 @@ export function sendP2PKHTransaction(
     throw new Error("Invalid outputIndex: no such output in the transaction");
   }
 
-  // 打印输出的值和脚本以确认
   const output = depositTransaction.outs[outputIndex];
 
-  // 根据交易和输出索引添加输入
   psbt.addInput({
     hash: depositTransaction.getId(),
     index: outputIndex,
     nonWitnessUtxo: Buffer.from(depositTransaction.toHex(), 'hex'),
   });
 
-  // 根据输入计算总输入金额
   const inputAmount = output.value;
 
-  // 添加输出
-  // 确定输出金额，扣除最小手续费
   const outputAmount = inputAmount - minimumFee;
   if (outputAmount <= 0) {
     throw new Error("Output amount must be greater than 0 after fees");
