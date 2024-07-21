@@ -48,8 +48,8 @@ async function deriveKey(mnemonic: string) {
 
 const lockingAmount = 5e7; // Satoshi
 async function initAccount(numCovenants: number): Promise<any[]> {
-    var accounts = new Array(numCovenants + 1);
-    // staker, finality provider, covenants...covenants+numConv
+    var accounts = new Array(numCovenants);
+    // staker, covenants...covenants+numConv
     for (var i = 0; i < accounts.length; i++) {
         accounts[i] = await deriveKey(mnemonicArray[i]);
     }
@@ -57,15 +57,13 @@ async function initAccount(numCovenants: number): Promise<any[]> {
 }
 
 class StakingProtocol {
-    fps: any[]
     covenants: any[]
     wallet: BitcoinCoreWallet
     stakingTx: Transaction
     unbondingTx: Transaction
     scripts: any
 
-    constructor(fps: any[], covenants: any[]) {
-        this.fps = fps;
+    constructor(covenants: any[]) {
         this.covenants = covenants;
         this.wallet = buildDefaultBitcoinCoreWallet(); // staker
         this.stakingTx = new Transaction;
@@ -85,7 +83,6 @@ class StakingProtocol {
     async lock() {
         let stakerPk = await this.getStakerPk();
         let stakerAddress = await this.wallet.getAddress();
-        let fpPk = Buffer.from(this.fps[0].publicKey, "hex").subarray(1, 33);
 
         let covenantsPks = this.covenants.map((x: any) => {
             return Buffer.from(x.publicKey, "hex").subarray(1, 33);
@@ -94,7 +91,6 @@ class StakingProtocol {
         let covenantThreshold = covenantsPks.length;
         let scriptData = new stakingScript.StakingScriptData(
             stakerPk,
-            [fpPk],
             covenantsPks,
             covenantThreshold,
             STAKING_TIMELOCK,
@@ -252,7 +248,6 @@ class StakingProtocol {
 
         let keyPairs = [
             //await this.wallet.dumpPrivKey(),
-            this.fps[0],
             this.covenants[0],
             this.covenants[1],
             this.covenants[2],
@@ -288,7 +283,6 @@ class StakingProtocol {
 
         let keyPairs = [
             await this.wallet.dumpPrivKey(),
-            this.fps[0],
             this.covenants[0],
             this.covenants[1],
             this.covenants[2],
@@ -326,7 +320,6 @@ class StakingProtocol {
 
    let keyPairs = [
        //await this.wallet.dumpPrivKey(),
-   this.fps[0],
    this.covenants[0],
    this.covenants[1],
    this.covenants[2],
@@ -351,9 +344,6 @@ class StakingProtocol {
         console.log("Fetching inputs for transaction.");
         let publicKeyNoCoord = stakerPk;
         console.log(`Staker Public Key No Coordinate: ${publicKeyNoCoord.toString('hex')}`);
-
-        let fpPk = Buffer.from(this.fps[0].publicKey, "hex").subarray(1, 33);
-        console.log(`First FPS Public Key No Coordinate: ${fpPk.toString('hex')}`);
 
         let inputUTXOs = await this.wallet.getUtxos(stakerAddress);
         // console.log(`Input UTXOs: ${JSON.stringify(inputUTXOs)}`);
@@ -423,9 +413,6 @@ class StakingProtocol {
         let publicKeyNoCoord = await this.getStakerPk();
         let stakerAddress = await this.wallet.getAddress();
         console.log(`Staker Public Key No Coordinate: ${publicKeyNoCoord.toString('hex')}`);
-
-        let fpPk = Buffer.from(this.fps[0].publicKey, "hex").subarray(1, 33);
-        console.log(`First FPS Public Key No Coordinate: ${fpPk.toString('hex')}`);
 
         let inputUTXOs = await this.wallet.getUtxos(stakerAddress);
         // console.log(`Input UTXOs: ${JSON.stringify(inputUTXOs)}`);
@@ -540,12 +527,11 @@ class StakingProtocol {
 
 async function run() {
     let accounts = await initAccount(3);
-    let stakingProtocol = new StakingProtocol([accounts[0]], accounts.slice(1));
+    let stakingProtocol = new StakingProtocol(accounts);
 
     await stakingProtocol.check_balance();
     // send token to staker
     /*
-   await stakingProtocol.fuel(await getAddress(stakingProtocol.fps[0]));
    await stakingProtocol.fuel(await getAddress(stakingProtocol.covenants[0]));
    await stakingProtocol.fuel(await getAddress(stakingProtocol.covenants[1]));
    await stakingProtocol.fuel(await getAddress(stakingProtocol.covenants[2]));
@@ -553,43 +539,43 @@ async function run() {
 
     await stakingProtocol.check_balance();
 
-    // // withdraw timelock
-    // {
-    //   await stakingProtocol.mine(STAKING_TIMELOCK, await stakingProtocol.wallet.getAddress());
-    //   await stakingProtocol.check_balance();
-    //   await stakingProtocol.lock();
-    //   await stakingProtocol.check_balance();
-    //   await stakingProtocol.withdrawTimelock();
-    // }
-    //
-    // // slash timelock
-    // {
-    //   await stakingProtocol.mine(STAKING_TIMELOCK, await stakingProtocol.wallet.getAddress());
-    //   await stakingProtocol.check_balance();
-    //   await stakingProtocol.lock();
-    //   await stakingProtocol.check_balance();
-    //   await stakingProtocol.slash();
-    // }
-    //
-    // // // slash early, TBD
-    // //{
-    // //    await mine(STAKING_TIMELOCK, await stakingProtocol.wallet.getAddress());
-    // //    await stakingProtocol.check_balance();
-    // //    await stakingProtocol.lock();
-    // //    await stakingProtocol.check_balance();
-    // //    await stakingProtocol.slashEarly();
-    // //}
-    //
-    // // withdraw early
-    // {
-    //   await stakingProtocol.mine(STAKING_TIMELOCK, await stakingProtocol.wallet.getAddress());
-    //   await stakingProtocol.check_balance();
-    //   await stakingProtocol.lock();
-    //   await stakingProtocol.check_balance();
-    //   // unbonding transcation
-    //   await stakingProtocol.unbonding();
-    //   await stakingProtocol.withdrawEarlyUnbounded();
-    // }
+    // withdraw timelock
+    {
+      await stakingProtocol.mine(STAKING_TIMELOCK, await stakingProtocol.wallet.getAddress());
+      await stakingProtocol.check_balance();
+      await stakingProtocol.lock();
+      await stakingProtocol.check_balance();
+      await stakingProtocol.withdrawTimelock();
+    }
+    
+    // slash timelock
+    {
+      await stakingProtocol.mine(STAKING_TIMELOCK, await stakingProtocol.wallet.getAddress());
+      await stakingProtocol.check_balance();
+      await stakingProtocol.lock();
+      await stakingProtocol.check_balance();
+      await stakingProtocol.slash();
+    }
+    
+    // // slash early, TBD
+    //{
+    //    await mine(STAKING_TIMELOCK, await stakingProtocol.wallet.getAddress());
+    //    await stakingProtocol.check_balance();
+    //    await stakingProtocol.lock();
+    //    await stakingProtocol.check_balance();
+    //    await stakingProtocol.slashEarly();
+    //}
+    
+    // withdraw early
+    {
+      await stakingProtocol.mine(STAKING_TIMELOCK, await stakingProtocol.wallet.getAddress());
+      await stakingProtocol.check_balance();
+      await stakingProtocol.lock();
+      await stakingProtocol.check_balance();
+      // unbonding transcation
+      await stakingProtocol.unbonding();
+      await stakingProtocol.withdrawEarlyUnbounded();
+    }
     //
     // // continue lock
     // {

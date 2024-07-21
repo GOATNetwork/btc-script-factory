@@ -49,7 +49,7 @@ async function deriveKey(mnemonic: string) {
 const lockingAmount = 5e7; // Satoshi
 async function initAccount(numCovenants: number): Promise<any[]> {
     var accounts = new Array(numCovenants);
-    // operator, finality provider, covenants...covenants+numConv
+    // operator, covenants...covenants+numConv
     for (var i = 0; i < accounts.length; i++) {
         accounts[i] = await deriveKey(mnemonicArray[i]);
     }
