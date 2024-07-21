@@ -13,9 +13,11 @@ import { initBTCCurve } from "./utils/curve";
 import { PK_LENGTH, StakingScriptData } from "./utils/stakingScript";
 import { PsbtTransactionResult } from "./types/transaction";
 import { UTXO } from "./types/UTXO";
+import { StakingScripts } from "./types/StakingScripts";
 import { getEstimatedFee, inputValueSum, getStakingTxInputUTXOsAndFees } from "./utils/fee";
 
 export { initBTCCurve, StakingScriptData };
+export { type UTXO, type StakingScripts }; 
 
 // https://bips.xyz/370
 const BTC_LOCKTIME_HEIGHT_TIME_CUTOFF = 500000000;

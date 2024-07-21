@@ -4,7 +4,9 @@ import { initBTCCurve } from "./utils/curve";
 import { StakingScriptData } from "./utils/stakingScript";
 import { PsbtTransactionResult } from "./types/transaction";
 import { UTXO } from "./types/UTXO";
+import { StakingScripts } from "./types/StakingScripts";
 export { initBTCCurve, StakingScriptData };
+export { type UTXO, type StakingScripts };
 /**
  * Constructs an unsigned BTC Staking transaction in psbt format.
  *
