@@ -3,7 +3,7 @@ import { StakingScripts } from "../types/StakingScripts";
 export declare const PK_LENGTH = 32;
 export declare class StakingScriptData {
     #private;
-    constructor(stakerKey: Buffer, finalityProviderKeys: Buffer[], covenantKeys: Buffer[], covenantThreshold: number, stakingTimelock: number, unbondingTimelock: number, magicBytes: Buffer);
+    constructor(stakerKey: Buffer, covenantKeys: Buffer[], covenantThreshold: number, stakingTimelock: number, unbondingTimelock: number, magicBytes: Buffer);
     /**
      * Validates the staking script.
      * @returns {boolean} Returns true if the staking script is valid, otherwise false.

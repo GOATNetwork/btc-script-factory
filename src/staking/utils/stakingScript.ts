@@ -9,7 +9,6 @@ export const PK_LENGTH = 32;
 // and exposes methods for converting it into useful formats
 export class StakingScriptData {
   #stakerKey: Buffer;
-  #finalityProviderKeys: Buffer[];
   #covenantKeys: Buffer[];
   #covenantThreshold: number;
   #stakingTimeLock: number;
@@ -19,10 +18,6 @@ export class StakingScriptData {
   constructor(
     // The `stakerKey` is the public key of the staker without the coordinate bytes.
     stakerKey: Buffer,
-    // A list of public keys without the coordinate bytes corresponding to the finality providers
-    // the stake will be delegated to.
-    // Currently, goat does not support restaking, so this should contain only a single item.
-    finalityProviderKeys: Buffer[],
     // A list of the public keys without the coordinate bytes corresponding to
     // the covenant emulators.
     // This is a parameter of the goat system and should be retrieved from there.
@@ -44,7 +39,6 @@ export class StakingScriptData {
     // Check that required input values are not missing when creating an instance of the StakingScriptData class
     if (
       !stakerKey ||
-      !finalityProviderKeys ||
       !covenantKeys ||
       !covenantThreshold ||
       !stakingTimelock ||
@@ -54,7 +48,6 @@ export class StakingScriptData {
       throw new Error("Missing required input values");
     }
     this.#stakerKey = stakerKey;
-    this.#finalityProviderKeys = finalityProviderKeys;
     this.#covenantKeys = covenantKeys;
     this.#covenantThreshold = covenantThreshold;
     this.#stakingTimeLock = stakingTimelock;
@@ -74,14 +67,6 @@ export class StakingScriptData {
   validate(): boolean {
     // check that staker key is the correct length
     if (this.#stakerKey.length != PK_LENGTH) {
-      return false;
-    }
-    // check that finalityProvider keys are the correct length
-    if (
-      this.#finalityProviderKeys.some(
-        (finalityProviderKey) => finalityProviderKey.length != PK_LENGTH,
-      )
-    ) {
       return false;
     }
     // check that covenant keys are the correct length
@@ -175,15 +160,6 @@ export class StakingScriptData {
     return Buffer.concat([
       this.#buildSingleKeyScript(this.#stakerKey, true),
       this.#buildMultiKeyScript(
-        this.#finalityProviderKeys,
-        // The threshold is always 1 as we only need one
-        // finalityProvider signature to perform slashing
-        // (only one finalityProvider performs an offence)
-        1,
-        // OP_VERIFY/OP_CHECKSIGVERIFY is added at the end
-        true,
-      ),
-      this.#buildMultiKeyScript(
         this.#covenantKeys,
         this.#covenantThreshold,
         // No need to add verify since covenants are at the end of the script
@@ -211,7 +187,6 @@ export class StakingScriptData {
       this.#magicBytes,
       version,
       this.#stakerKey,
-      this.#finalityProviderKeys[0],
       stakingTimeLock,
     ]);
     return script.compile([opcodes.OP_RETURN, serializedStakingData]);
