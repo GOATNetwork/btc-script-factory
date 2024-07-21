@@ -67,6 +67,7 @@ class DepositProtocol {
         this.wallet = buildDefaultBitcoinCoreWallet(); // operator
         this.depositTx = new Transaction;
         this.scripts = null;
+        this.wallet.walletPassphrase('btcstaker', 3600);
     }
 
     async buildScripts() {
@@ -117,7 +118,11 @@ class DepositProtocol {
         console.log("signPsbtFromBase64");
 
         //let receipt = await this.wallet.pushTx(depositTx);
-        let txHex = signedDepositPsbt.extractTransaction().toHex();
+        const tx = signedDepositPsbt.extractTransaction();
+        const virtualSize = tx.virtualSize();
+        console.log("deposit virtual Byte:", virtualSize);
+
+        let txHex = tx.toHex();
         console.log("txHex: ", txHex);
 
         await this.mine(10, await this.wallet.getAddress());
@@ -179,6 +184,10 @@ class DepositProtocol {
         console.log("signPsbt");
         const signedSendPsbtHex = await this.wallet.signPsbtFromBase64(sendPsbt.psbt.toBase64(), keyPairs, true);
 
+        const tx = Transaction.fromHex(signedSendPsbtHex);
+        const virtualSize = tx.virtualSize();
+        console.log("send virtual Byte:", virtualSize);
+
         console.log("pushTx", signedSendPsbtHex);
         this.check_balance();
         let receipt = await this.wallet.pushTx(signedSendPsbtHex);
@@ -186,6 +195,159 @@ class DepositProtocol {
         this.check_balance();
         console.log('receipt: ', receipt);
     }
+
+    async depositP2SH() {
+      console.log('depositP2SH')
+      const { operatorAddress} = await this.buildScripts();
+
+
+      let changeAddress = await this.wallet.getAddress();
+      let inputUTXOs = await this.wallet.getUtxos(operatorAddress);
+      let feeRate = 1000;
+
+
+      let { psbt } = bridge.depositP2SHTransaction(this.scripts, lockingAmount, changeAddress, inputUTXOs,   network, feeRate, this.covenants.map(x => x.publicKey), this.covenants.length);
+
+      console.log('psbt base64:', psbt.toBase64())
+      const signedDepositPsbtHex = await this.wallet.signPsbt(psbt.toHex());
+      console.log("walltet signPsbt", signedDepositPsbtHex);
+      let signedDepositPsbt = Psbt.fromHex(signedDepositPsbtHex);
+      console.log("signPsbtFromBase64");
+
+      const tx = signedDepositPsbt.extractTransaction();
+
+      const virtualSize = tx.virtualSize();
+      console.log("depositP2SH virtual Byte:", virtualSize);
+
+      const txHex = tx.toHex();
+      console.log("txHex: ", txHex);
+
+      await this.mine(10, await this.wallet.getAddress());
+
+      let receipt = await this.wallet.pushTx(txHex);
+      // console.log(`txid: ${receipt}`)
+      this.depositTx = Transaction.fromHex(txHex);
+    }
+
+    async sendP2SH() {
+      console.log("sendP2SH");
+      await this.mine(20, await this.wallet.getAddress());
+      let { fastestFee } = await this.wallet.getNetworkFees();
+      let depositOutputIndex = 0;
+      let sendAddress = "bcrt1q7gjfeaydr8edeupkw3encq8pksnalvnda5yakt";
+      // console.log(`fastestFee ${fastestFee}, send address ${sendAddress}`)
+      const sendPsbt : { psbt : Psbt; } = bridge.sendP2SHTransaction(
+        this.depositTx,
+        sendAddress,
+        fastestFee || 1000, // feeRate,
+        network,
+        depositOutputIndex,
+        this.covenants.map(x => x.publicKey),
+        this.covenants.length
+      );
+      console.log(await this.wallet.getAddress());
+
+      let keyPairs = [
+        this.covenants[0],
+        this.covenants[1],
+        this.covenants[2],
+      ];
+      console.log("signPsbt");
+      const signedTransactionHex = await this.wallet.signPsbtFromBase64(sendPsbt.psbt.toBase64(), keyPairs, true);
+
+      const tx = Transaction.fromHex(signedTransactionHex);
+      const virtualSize = tx.virtualSize();
+      console.log("sendP2SH virtual Byte:", virtualSize);
+
+      console.log("pushTx", signedTransactionHex);
+      this.check_balance();
+      let receipt = await this.wallet.pushTx(signedTransactionHex);
+      await this.mine(20, await this.wallet.getAddress());
+      this.check_balance();
+      console.log('receipt: ', receipt);
+    }
+
+    async depositP2PKH() {
+      console.log('depositP2PKH')
+      const { operatorAddress} = await this.buildScripts();
+
+
+      let changeAddress = await this.wallet.getAddress();
+      let inputUTXOs = await this.wallet.getUtxos(operatorAddress, lockingAmount * 2, true);
+      let feeRate = 1000;
+
+
+      let { psbt } = bridge.depositP2PKHTransaction(this.scripts, lockingAmount, changeAddress, inputUTXOs,   network, feeRate, this.covenants[0]);
+
+      console.log('psbt base64:', psbt.toBase64())
+      const signedDepositPsbtHex = await this.wallet.signPsbt(psbt.toHex());
+      console.log("walltet signPsbt", signedDepositPsbtHex);
+      let signedDepositPsbt = Psbt.fromHex(signedDepositPsbtHex);
+      console.log("signPsbtFromBase64");
+
+      const tx = signedDepositPsbt.extractTransaction();
+
+      const virtualSize = tx.virtualSize();
+      console.log("depositP2PKH virtual Byte:", virtualSize);
+
+      const txHex = tx.toHex();
+      console.log("txHex: ", txHex);
+
+      await this.mine(10, await this.wallet.getAddress());
+
+      let receipt = await this.wallet.pushTx(txHex);
+      // console.log(`txid: ${receipt}`)
+      this.depositTx = Transaction.fromHex(txHex);
+    }
+
+    async sendP2PKH() {
+      console.log("sendP2PKH");
+      await this.mine(20, await this.wallet.getAddress());
+      let { fastestFee } = await this.wallet.getNetworkFees();
+      let depositOutputIndex = 0;
+      let sendAddress = "bcrt1q7gjfeaydr8edeupkw3encq8pksnalvnda5yakt";
+      // console.log(`fastestFee ${fastestFee}, send address ${sendAddress}`)
+      const sendPsbt : { psbt : Psbt; } = bridge.sendP2PKHTransaction(
+        this.depositTx,
+        sendAddress,
+        fastestFee || 1000, // feeRate,
+        network,
+        depositOutputIndex,
+      );
+      // console.log(await this.wallet.getAddress());
+
+      let keyPairs = [
+        this.covenants[0],
+        this.covenants[1],
+        this.covenants[2],
+      ];
+      // console.log("signPsbt");
+      sendPsbt.psbt.signInput(0, keyPairs[0]);
+      const validateSignature = (pubkey: Buffer, msghash: Buffer, signature: Buffer) => {
+        const secp256k1 = require('secp256k1');
+        return secp256k1.ecdsaVerify(signature, msghash, pubkey);
+      };
+
+      const isValidSignature = sendPsbt.psbt.validateSignaturesOfInput(0, validateSignature);
+      if (!isValidSignature) {
+        throw new Error("Signature validation failed");
+      }
+
+      sendPsbt.psbt.finalizeAllInputs();
+      const tx = sendPsbt.psbt.extractTransaction();
+
+      const virtualSize = tx.virtualSize();
+      console.log("sendP2PKH virtual Byte:", virtualSize);
+
+      const signedSendPsbtHex = tx.toHex();
+
+      console.log("pushTx", signedSendPsbtHex);
+      this.check_balance();
+      let receipt = await this.wallet.pushTx(signedSendPsbtHex);
+      await this.mine(20, await this.wallet.getAddress());
+      this.check_balance();
+    // console.log('receipt: ', receipt);
+  }
 
     async check_balance() {
         console.log("Wallet balance: ", await this.wallet.getBalance());
@@ -276,6 +438,36 @@ async function run() {
     await bridgeProtocol.check_balance();
     await bridgeProtocol.send();
     // }
+
+    console.log('p2pkh: ')
+    // p2sh/p2wsh send
+    {
+      await bridgeProtocol.mine(DEPOSIT_TIMELOCK, await bridgeProtocol.wallet.getAddress());
+      await bridgeProtocol.check_balance();
+      await bridgeProtocol.depositP2PKH();
+      await bridgeProtocol.check_balance();
+      await bridgeProtocol.sendP2PKH();
+    }
+
+    console.log('p2tr: ')
+    // send
+    {
+      await bridgeProtocol.mine(DEPOSIT_TIMELOCK, await bridgeProtocol.wallet.getAddress());
+      await bridgeProtocol.check_balance();
+      await bridgeProtocol.deposit();
+      await bridgeProtocol.check_balance();
+      await bridgeProtocol.send();
+    }
+
+    console.log('p2ms in p2wsh: ')
+    // p2sh/p2wsh send
+    {
+      await bridgeProtocol.mine(DEPOSIT_TIMELOCK, await bridgeProtocol.wallet.getAddress());
+      await bridgeProtocol.check_balance();
+      await bridgeProtocol.depositP2SH();
+      await bridgeProtocol.check_balance();
+      await bridgeProtocol.sendP2SH();
+    }
 }
 
 run().then(() => {
