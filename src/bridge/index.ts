@@ -8,7 +8,7 @@ import {
 } from "bitcoinjs-lib";
 import { Taptree } from "bitcoinjs-lib/src/types";
 
-import { internalPubkey } from "./constants/internalPubkey";
+import { internalPubkey } from "../constants/internalPubkey";
 import { initBTCCurve } from "./utils/curve";
 import { PK_LENGTH, BridgeScriptData } from "./utils/bridgeScript";
 import { PsbtTransactionResult } from "./types/transaction";
