@@ -28,10 +28,10 @@ export const ESTIMATED_OP_RETURN_SIZE = 40;
  * @param feeRate - The fee rate in satoshis per byte.
  * @param numInputs - The number of inputs in the transaction.
  * @param numOutputs - The number of outputs in the transaction.
- * @returns The estimated transaction fee in satoshis.
+ * @return The estimated transaction fee in satoshis.
  */
 export const getEstimatedFee = (
-    feeRate: number, numInputs: number, numOutputs: number,
+    feeRate: number, numInputs: number, numOutputs: number
 ): number => {
     return (
         numInputs * INPUT_SIZE_FOR_FEE_CAL +
@@ -48,7 +48,7 @@ export const inputValueSum = (inputUTXOs: UTXO[]): number => {
 /**
  * Selects UTXOs and calculates the fee for a staking transaction.
  *
- * This method selects the highest value UTXOs from all available UTXOs to 
+ * This method selects the highest value UTXOs from all available UTXOs to
  * cover the staking amount and the transaction fees.
  *
  * Inputs:
@@ -65,14 +65,14 @@ export const inputValueSum = (inputUTXOs: UTXO[]): number => {
  * @param {number} stakingAmount - The amount to stake.
  * @param {number} feeRate - The fee rate in satoshis per byte.
  * @param {number} numOfOutputs - The number of outputs in the transaction.
- * @returns {PsbtTransactionResult} An object containing the selected UTXOs and the fee.
+ * @return {PsbtTransactionResult} An object containing the selected UTXOs and the fee.
  * @throws Will throw an error if there are insufficient funds or if the fee cannot be calculated.
  */
 export const getStakingTxInputUTXOsAndFees = (
     availableUTXOs: UTXO[],
     stakingAmount: number,
     feeRate: number,
-    numOfOutputs: number,
+    numOfOutputs: number
 ): {
     selectedUTXOs: UTXO[],
     fee: number,
@@ -106,6 +106,6 @@ export const getStakingTxInputUTXOsAndFees = (
 
     return {
         selectedUTXOs,
-        fee: estimatedFee,
+        fee: estimatedFee
     };
 }

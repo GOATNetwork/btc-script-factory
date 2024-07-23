@@ -1,0 +1,23 @@
+name: Lint sol&js
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  lint_ts:
+      name: Lint typescript
+      runs-on: ubuntu-latest
+      steps:
+        - uses: actions/checkout@v2
+          with:
+            fetch-depth: 0
+        - uses: actions/setup-node@v2
+          with:
+            node-version: 18.x
+        - run: npm install
+        - name: Lint Check
+          run: npm run lint
