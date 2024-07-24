@@ -1,5 +1,4 @@
 import { script, opcodes } from "bitcoinjs-lib";
-import { GoatScripts } from "../types/GoatScripts";
 
 export const PK_LENGTH = 32;
 export const ETH_PK_LENGTH = 20;
@@ -7,7 +6,6 @@ export const ETH_PK_LENGTH = 20;
 export class GoatScriptData {
   private posPubkey: Buffer;
   private delegatorKey: Buffer;
-  private validatorKey: Buffer;
   private transferTimeLock: number;
   private combineBytes: Buffer; // Holds combined validatorIndex and nonce
   private evmAddress: Buffer;
@@ -15,14 +13,13 @@ export class GoatScriptData {
   constructor(
     posPubkey: Buffer,
     delegatorKey: Buffer,
-    validatorKey: Buffer,
     transferTimeLock: number,
     validatorIndex: number,
     nonce: number,
     evmAddress: Buffer
   ) {
     if (
-      !Buffer.isBuffer(delegatorKey) || !Buffer.isBuffer(validatorKey) || !Buffer.isBuffer(evmAddress) || !Buffer.isBuffer(posPubkey) ||
+      !Buffer.isBuffer(delegatorKey) || !Buffer.isBuffer(evmAddress) || !Buffer.isBuffer(posPubkey) ||
       typeof transferTimeLock !== 'number' ||
       typeof validatorIndex !== 'number' || typeof nonce !== 'number'
     ) {
@@ -31,7 +28,6 @@ export class GoatScriptData {
 
     this.posPubkey = posPubkey;
     this.delegatorKey = delegatorKey;
-    this.validatorKey = validatorKey;
     this.transferTimeLock = transferTimeLock;
     this.combineBytes = Buffer.concat([Buffer.alloc(4, validatorIndex), Buffer.alloc(4, nonce)]); // Ensure 4 bytes for each part
     this.evmAddress = evmAddress;
@@ -43,10 +39,6 @@ export class GoatScriptData {
 
   private validate(): boolean {
     if (this.delegatorKey.length !== PK_LENGTH || this.evmAddress.length !== ETH_PK_LENGTH) {
-      return false;
-    }
-
-    if (this.validatorKey.length !== PK_LENGTH) {
       return false;
     }
 
@@ -121,7 +113,7 @@ export class GoatScriptData {
         this.combineBytes,
         opcodes.OP_EQUALVERIFY,
         opcodes.OP_2,
-        this.validatorKey,
+        this.posPubkey,
         this.delegatorKey,
         opcodes.OP_2,
         opcodes.OP_CHECKMULTISIG,
