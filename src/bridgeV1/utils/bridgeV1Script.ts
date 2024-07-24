@@ -3,7 +3,7 @@ import { script, opcodes } from "bitcoinjs-lib";
 export const PK_LENGTH = 32;
 export const ETH_PK_LENGTH = 20;
 
-export class GoatScriptData {
+export class BridgeV1ScriptData {
   private posPubkey: Buffer;
   private delegatorKey: Buffer;
   private transferTimeLock: number;
@@ -20,8 +20,8 @@ export class GoatScriptData {
   ) {
     if (
       !Buffer.isBuffer(delegatorKey) || !Buffer.isBuffer(evmAddress) || !Buffer.isBuffer(posPubkey) ||
-      typeof transferTimeLock !== 'number' ||
-      typeof validatorIndex !== 'number' || typeof nonce !== 'number'
+      typeof transferTimeLock !== "number" ||
+      typeof validatorIndex !== "number" || typeof nonce !== "number"
     ) {
       throw new Error("Invalid input types");
     }
@@ -63,7 +63,7 @@ export class GoatScriptData {
    * 2. <posPubkey>: Pushes the user's public key onto the stack.
    * 3. OP_CHECKSIG: Validates the signature of the transaction using the provided public key.
    *
-   * @returns {Buffer} - The compiled script buffer ready for use in blockchain transactions.
+   * @return {Buffer} - The compiled script buffer ready for use in blockchain transactions.
    * <evmAddress> OP_DROP <posPubkey> OP_CHECKSIG
    */
   public buildDepositScript(): Buffer {
@@ -89,7 +89,7 @@ export class GoatScriptData {
    *    a. Compares the next item with either the validator index or a nonce (OP_EQUAL_VERIFY).
    *    b. Performs a 2-of-2 multisig check using the position public key and the delegator's public key (OP_CHECKMULTISIG).
    * 6. Ends the conditional execution (OP_ENDIF).
-   *  @returns {Buffer}
+   *  @return {Buffer}
    *   OP_DUP <ownerEVMAddress> OP_EQUAL
    *   OP_IF
    *    OP_DROP <blockCount> OP_CHECKSEQUENCEVERIFY OP_DROP <DelegatorPubkey> OP_CHECKSIG

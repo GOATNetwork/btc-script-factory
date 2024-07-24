@@ -1,20 +1,16 @@
 import {
-  script,
   payments,
   Psbt,
   Transaction,
-  networks,
-  address,
+  networks
 } from "bitcoinjs-lib";
-import { Taptree } from "bitcoinjs-lib/src/types";
 
 import { initBTCCurve } from "./utils/curve";
-import { PK_LENGTH, GoatScriptData } from "./utils/goatScript";
-import { PsbtTransactionResult } from "./types/transaction";
+import { BridgeV1ScriptData } from "./utils/bridgeV1Script";
 import { UTXO } from "./types/UTXO";
-import { getEstimatedFee, inputValueSum, getDepositTxInputUTXOsAndFees } from "./utils/fee";
+import { inputValueSum, getDepositTxInputUTXOsAndFees } from "./utils/fee";
 
-export { initBTCCurve, GoatScriptData };
+export { initBTCCurve, BridgeV1ScriptData };
 
 // https://bips.xyz/370
 const BTC_LOCKTIME_HEIGHT_TIME_CUTOFF = 500000000;
@@ -30,7 +26,7 @@ export function depositTransaction(
   network: networks.Network,
   feeRate: number,
   publicKeyNoCoord?: Buffer,
-  lockHeight?: number,
+  lockHeight?: number
   ) {
   if (amount <= 0 || feeRate <= 0) {
     throw new Error("Amount and fee rate must be bigger than 0");
@@ -41,29 +37,29 @@ export function depositTransaction(
   const p2wsh = payments.p2wsh({
     redeem: payments.p2ms({
       output: scripts.depositScript,
-      network,
+      network
     }),
-    network,
+    network
   });
 
   const { selectedUTXOs, fee } = getDepositTxInputUTXOsAndFees(inputUTXOs, amount, feeRate, 2);
 
-  selectedUTXOs.forEach(input => {
+  selectedUTXOs.forEach((input) => {
     psbt.addInput({
       hash: input.txid,
       index: input.vout,
       witnessUtxo: {
-        script: Buffer.from(input.scriptPubKey, 'hex'),
-        value: input.value,
+        script: Buffer.from(input.scriptPubKey, "hex"),
+        value: input.value
       },
       redeemScript: p2wsh.redeem!.output,
-      sequence: 0xfffffffd, // Enable locktime by setting the sequence value to (RBF-able)
+      sequence: 0xfffffffd // Enable locktime by setting the sequence value to (RBF-able)
     });
   });
 
   psbt.addOutput({
     address: p2wsh.address!,
-    value: amount,
+    value: amount
   });
 
   const inputsSum = inputValueSum(selectedUTXOs);
@@ -71,7 +67,7 @@ export function depositTransaction(
   if ((inputsSum - (amount + fee)) > BTC_DUST_SAT) {
     psbt.addOutput({
       address: changeAddress,
-      value: inputsSum - (amount + fee),
+      value: inputsSum - (amount + fee)
     });
   }
 
@@ -84,7 +80,7 @@ export function depositTransaction(
 
   return {
     psbt,
-    fee,
+    fee
   }
 }
 
@@ -96,7 +92,7 @@ export function sendTransaction(
   sendAddress: string,
   minimumFee: number,
   network: networks.Network,
-  outputIndex = 0,
+  outputIndex = 0
 ) {
   if (minimumFee <= 0) {
     throw new Error("Minimum fee must be bigger than 0");
@@ -114,14 +110,14 @@ export function sendTransaction(
     index: outputIndex,
     witnessUtxo: {
       value: depositTransaction.outs[outputIndex].value,
-      script: depositTransaction.outs[outputIndex].script,
+      script: depositTransaction.outs[outputIndex].script
     },
-    witnessScript: scripts.depositScript, // This is typically the same as the script used for depositing if P2WSH was used
+    witnessScript: scripts.depositScript // This is typically the same as the script used for depositing if P2WSH was used
   });
 
   psbt.addOutput({
     address: sendAddress,
-    value: outputValue - minimumFee, // Subtract the minimum fee from the output value
+    value: outputValue - minimumFee // Subtract the minimum fee from the output value
   });
 
   return { psbt };

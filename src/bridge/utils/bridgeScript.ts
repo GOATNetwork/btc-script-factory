@@ -19,7 +19,7 @@ export class BridgeScriptData {
     covenantThreshold: number,
     transferTimeLock: number,
     magicBytes: Buffer,
-    evmAddress: Buffer,
+    evmAddress: Buffer
   ) {
     if (
       !userKey ||
@@ -70,7 +70,7 @@ export class BridgeScriptData {
       this.#userKey,
       opcodes.OP_CHECKSIGVERIFY,
       script.number.encode(timelock),
-      opcodes.OP_CHECKSEQUENCEVERIFY,
+      opcodes.OP_CHECKSEQUENCEVERIFY
     ]);
   }
 
@@ -82,7 +82,7 @@ export class BridgeScriptData {
     return this.#buildMultiKeyScript(
       this.#covenantKeys,
       this.#covenantThreshold,
-      false,
+      false
     );
   }
 
@@ -94,7 +94,7 @@ export class BridgeScriptData {
       this.#magicBytes,
       version,
       this.#userKey,
-      this.#evmAddress,  // Added the EVM address buffer here
+      this.#evmAddress // Added the EVM address buffer here
     ]);
 
     return script.compile([opcodes.OP_RETURN, serializedDepositData]);
@@ -104,7 +104,7 @@ export class BridgeScriptData {
     return {
       timelockScript: this.buildTransferTimeLockScript(),
       dataEmbedScript: this.buildDataEmbedScript(),
-      transferScript: this.buildTransferScript(),
+      transferScript: this.buildTransferScript()
     };
   }
 
@@ -113,9 +113,9 @@ export class BridgeScriptData {
    * buildSingleKeyScript creates a single key script
    *    <pk> OP_CHECKSIGVERIFY (if withVerify is true)
    *    <pk> OP_CHECKSIG (if withVerify is false)
-   * @param pk - The public key buffer.
-   * @param withVerify - A boolean indicating whether to include the OP_CHECKSIGVERIFY opcode.
-   * @returns The compiled script buffer.
+   * @param {Buffer} pk - The public key buffer.
+   * @param {boolean} withVerify - A boolean indicating whether to include the OP_CHECKSIGVERIFY opcode.
+   * @return {Buffer} The compiled script buffer.
    */
   #buildSingleKeyScript(pk: Buffer, withVerify: boolean): Buffer {
     // Check public key length
@@ -124,7 +124,7 @@ export class BridgeScriptData {
     }
     return script.compile([
       pk,
-      withVerify ? opcodes.OP_CHECKSIGVERIFY : opcodes.OP_CHECKSIG,
+      withVerify ? opcodes.OP_CHECKSIGVERIFY : opcodes.OP_CHECKSIG
     ]);
   }
 
@@ -134,16 +134,16 @@ export class BridgeScriptData {
    *    <withVerify -> OP_NUMEQUALVERIFY>
    * It validates whether provided keys are unique and the threshold is not greater than number of keys
    * If there is only one key provided it will return single key sig script
-   * @param pks - An array of public keys.
-   * @param threshold - The required number of valid signers.
-   * @param withVerify - A boolean indicating whether to include the OP_VERIFY opcode.
-   * @returns The compiled multi-key script as a Buffer.
+   * @param {Array<string>} pks - An array of public keys.
+   * @param {number} threshold - The required number of valid signers.
+   * @param {boolean} withVerify - A boolean indicating whether to include the OP_VERIFY opcode.
+   * @return {Buffer} The compiled multi-key script as a Buffer.
    * @throws {Error} If no keys are provided, if the required number of valid signers is greater than the number of provided keys, or if duplicate keys are provided.
    */
   #buildMultiKeyScript(
     pks: Buffer[],
     threshold: number,
-    withVerify: boolean,
+    withVerify: boolean
   ): Buffer {
     // Verify that pks is not empty
     if (!pks || pks.length === 0) {
@@ -156,7 +156,7 @@ export class BridgeScriptData {
     // Verify that threshold <= len(pks)
     if (threshold > pks.length) {
       throw new Error(
-        "Required number of valid signers is greater than number of provided keys",
+        "Required number of valid signers is greater than number of provided keys"
       );
     }
     if (pks.length === 1) {

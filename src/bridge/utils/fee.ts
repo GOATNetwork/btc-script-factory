@@ -25,13 +25,14 @@ export const ESTIMATED_OP_RETURN_SIZE = 40;
  * - Adds 40 bytes for an OP_RETURN output.
  * - Adds the number of inputs to account for additional overhead.
  *
- * @param feeRate - The fee rate in satoshis per byte.
- * @param numInputs - The number of inputs in the transaction.
- * @param numOutputs - The number of outputs in the transaction.
- * @returns The estimated transaction fee in satoshis.
+ * @param {number} feeRate - The fee rate in satoshis per byte.
+ * @param {number} numInputs - The number of inputs in the transaction.
+ * @param {number} numOutputs - The number of outputs in the transaction.
+ * @return {number} The estimated transaction fee in satoshis.
  */
+
 export const getEstimatedFee = (
-    feeRate: number, numInputs: number, numOutputs: number,
+    feeRate: number, numInputs: number, numOutputs: number
 ): number => {
     return (
         numInputs * INPUT_SIZE_FOR_FEE_CAL +
@@ -49,7 +50,7 @@ export const getDepositTxInputUTXOsAndFees = (
     availableUTXOs: UTXO[],
     depositAmount: number,
     feeRate: number,
-    numOfOutputs: number,
+    numOfOutputs: number
 ): {
     selectedUTXOs: UTXO[],
     fee: number,
@@ -83,6 +84,6 @@ export const getDepositTxInputUTXOsAndFees = (
 
     return {
         selectedUTXOs,
-        fee: estimatedFee,
+        fee: estimatedFee
     };
 }

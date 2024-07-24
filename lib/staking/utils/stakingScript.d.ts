@@ -6,13 +6,13 @@ export declare class StakingScriptData {
     constructor(stakerKey: Buffer, covenantKeys: Buffer[], covenantThreshold: number, stakingTimelock: number, unbondingTimelock: number, magicBytes: Buffer);
     /**
      * Validates the staking script.
-     * @returns {boolean} Returns true if the staking script is valid, otherwise false.
+     * @return {boolean} Returns true if the staking script is valid, otherwise false.
      */
     validate(): boolean;
     /**
      * Builds a timelock script.
-     * @param timelock - The timelock value to encode in the script.
-     * @returns {Buffer} containing the compiled timelock script.
+     * @param {number} timelock - The timelock value to encode in the script.
+     * @return {Buffer} containing the compiled timelock script.
      */
     buildTimelockScript(timelock: number): Buffer;
     /**
@@ -23,7 +23,7 @@ export declare class StakingScriptData {
      *    OP_CHECKSIGVERIFY
      *    <stakingTimeBlocks>
      *    OP_CHECKSEQUENCEVERIFY
-     * @returns {Buffer} The staking timelock script.
+     * @return {Buffer} The staking timelock script.
      */
     buildStakingTimelockScript(): Buffer;
     /**
@@ -33,7 +33,7 @@ export declare class StakingScriptData {
      *    OP_CHECKSIGVERIFY
      *    <unbondingTimeBlocks>
      *    OP_CHECKSEQUENCEVERIFY
-     * @returns {Buffer} The unbonding timelock script.
+     * @return {Buffer} The unbonding timelock script.
      */
     buildUnbondingTimelockScript(): Buffer;
     /**
@@ -41,7 +41,7 @@ export declare class StakingScriptData {
      *    buildSingleKeyScript(stakerPk, true) ||
      *    buildMultiKeyScript(covenantPks, covenantThreshold, false)
      *    || means combining the scripts
-     * @returns {Buffer} The unbonding script.
+     * @return {Buffer} The unbonding script.
      */
     buildUnbondingScript(): Buffer;
     /**
@@ -53,7 +53,7 @@ export declare class StakingScriptData {
      * The slashing script is a combination of single-key and multi-key scripts.
      * The single-key script is used for staker key verification.
      * The multi-key script is used for finality provider key verification and covenant key verification.
-     * @returns {Buffer} The slashing script as a Buffer.
+     * @return {Buffer} The slashing script as a Buffer.
      */
     buildSlashingScript(): Buffer;
     /**
@@ -61,12 +61,12 @@ export declare class StakingScriptData {
      *    OP_RETURN || <serializedStakingData>
      * where serializedStakingData is the concatenation of:
      *    MagicBytes || Version || StakerPublicKey || FinalityProviderPublicKey || StakingTimeLock
-     * @returns {Buffer} The compiled data embed script.
+     * @return {Buffer} The compiled data embed script.
      */
     buildDataEmbedScript(): Buffer;
     /**
      * Builds the staking scripts.
-     * @returns {StakingScripts} The staking scripts.
+     * @return {StakingScripts} The staking scripts.
      */
     buildScripts(): StakingScripts;
 }
