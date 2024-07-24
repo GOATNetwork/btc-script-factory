@@ -4,7 +4,7 @@ import {
   Psbt,
   Transaction,
   networks,
-  address,
+  address
 } from "bitcoinjs-lib";
 import { Taptree } from "bitcoinjs-lib/src/types";
 
@@ -33,7 +33,7 @@ export function depositTransaction(
   network: networks.Network,
   feeRate: number,
   publicKeyNoCoord?: Buffer,
-  lockHeight?: number,
+  lockHeight?: number
 ): PsbtTransactionResult {
   // Check that amount and fee are bigger than 0
   if (amount <= 0 || feeRate <= 0) {
@@ -67,37 +67,37 @@ export function depositTransaction(
       index: input.vout,
       witnessUtxo: {
         script: Buffer.from(input.scriptPubKey, "hex"),
-        value: input.value,
+        value: input.value
       },
       // this is needed only if the wallet is in taproot mode
       ...(publicKeyNoCoord && { tapInternalKey: publicKeyNoCoord }),
-      sequence: 0xfffffffd, // Enable locktime by setting the sequence value to (RBF-able)
+      sequence: 0xfffffffd // Enable locktime by setting the sequence value to (RBF-able)
     });
   }
 
   const scriptTree: Taptree = [
     { output: scripts.transferScript },
-    { output: scripts.timelockScript },
+    { output: scripts.timelockScript }
   ];
 
   // Create an pay-2-taproot (p2tr) output using the deposit script
   const depositOutput = payments.p2tr({
     internalPubkey,
     scriptTree,
-    network,
+    network
   });
 
   // Add the deposit output to the transaction
   psbt.addOutput({
     address: depositOutput.address!,
-    value: amount,
+    value: amount
   });
 
   if (scripts.dataEmbedScript) {
     // Add the data embed output to the transaction
     psbt.addOutput({
       script: scripts.dataEmbedScript,
-      value: 0,
+      value: 0
     });
   }
 
@@ -108,7 +108,7 @@ export function depositTransaction(
   if ((inputsSum - (amount + fee)) > BTC_DUST_SAT) {
     psbt.addOutput({
       address: changeAddress,
-      value: inputsSum - (amount + fee),
+      value: inputsSum - (amount + fee)
     });
   }
 
@@ -137,11 +137,11 @@ export function sendTransaction(
   sendAddress: string,
   minimumFee: number,
   network: networks.Network,
-  outputIndex: number = 0,
+  outputIndex: number = 0
 ): { psbt: Psbt } {
   const scriptTree: Taptree = [
     { output: scripts.transferScript },
-    { output: scripts.timelockScript },
+    { output: scripts.timelockScript }
   ];
 
   if (minimumFee <= 0) {
@@ -154,20 +154,20 @@ export function sendTransaction(
 
   const redeem = {
     output: scripts.transferScript,
-    redeemVersion: 192,
+    redeemVersion: 192
   };
 
   const p2tr = payments.p2tr({
     internalPubkey,
     scriptTree,
     redeem,
-    network,
+    network
   });
 
   const tapLeafScript = {
     leafVersion: redeem.redeemVersion,
     script: redeem.output,
-    controlBlock: p2tr.witness![p2tr.witness!.length - 1],
+    controlBlock: p2tr.witness![p2tr.witness!.length - 1]
   };
 
   const psbt = new Psbt({ network });
@@ -177,14 +177,14 @@ export function sendTransaction(
     tapInternalKey: internalPubkey,
     witnessUtxo: {
       value: depositTransaction.outs[0].value,
-      script: depositTransaction.outs[0].script,
+      script: depositTransaction.outs[0].script
     },
-    tapLeafScript: [tapLeafScript],
+    tapLeafScript: [tapLeafScript]
   });
 
   psbt.addOutput({
     address: sendAddress,
-    value: depositTransaction.outs[0].value - minimumFee,
+    value: depositTransaction.outs[0].value - minimumFee
   });
 
   return { psbt }
@@ -200,11 +200,11 @@ export function recaptureTransferTimelockTransaction(
   recaptureAddress: string,
   network: networks.Network,
   feeRate: number,
-  outputIndex: number = 0,
+  outputIndex: number = 0
 ): PsbtTransactionResult {
   const scriptTree: Taptree = [
     { output: scripts.transferScript },
-    { output: scripts.timelockScript },
+    { output: scripts.timelockScript }
   ];
 
   return recaptureTransaction(
@@ -214,7 +214,7 @@ export function recaptureTransferTimelockTransaction(
     recaptureAddress,
     network,
     feeRate,
-    outputIndex,
+    outputIndex
   );
 }
 
@@ -227,7 +227,7 @@ function recaptureTransaction(
   recaptureAddress: string,
   network: networks.Network,
   feeRate: number,
-  outputIndex: number = 0,
+  outputIndex: number = 0
 ): PsbtTransactionResult {
   // Check that recapture feeRate is bigger than 0
   if (feeRate <= 0) {
@@ -241,7 +241,7 @@ function recaptureTransaction(
 
   // position of time in the timelock script
   const timePosition = 2;
-  const decompiled  = script.decompile(scripts.timelockScript);
+  const decompiled = script.decompile(scripts.timelockScript);
 
   if (!decompiled) {
     throw new Error("Timelock script is not valid");
@@ -261,20 +261,20 @@ function recaptureTransaction(
 
   const redeem = {
     output: scripts.timelockScript,
-    redeemVersion: 192,
+    redeemVersion: 192
   };
 
   const p2tr = payments.p2tr({
     internalPubkey,
     scriptTree,
     redeem,
-    network,
+    network
   });
 
   const tapLeafScript = {
     leafVersion: redeem.redeemVersion,
     script: redeem.output,
-    controlBlock: p2tr.witness![p2tr.witness!.length - 1],
+    controlBlock: p2tr.witness![p2tr.witness!.length - 1]
   };
 
   const psbt = new Psbt({ network });
@@ -289,10 +289,10 @@ function recaptureTransaction(
     tapInternalKey: internalPubkey,
     witnessUtxo: {
       value: tx.outs[outputIndex].value,
-      script: tx.outs[outputIndex].script,
+      script: tx.outs[outputIndex].script
     },
     tapLeafScript: [tapLeafScript],
-    sequence: timelock,
+    sequence: timelock
   });
 
   const outputValue = tx.outs[outputIndex].value;
@@ -304,7 +304,7 @@ function recaptureTransaction(
   console.log(`estimatedFee ${estimatedFee}, value`, tx.outs[outputIndex].value);
   psbt.addOutput({
     address: recaptureAddress,
-    value: tx.outs[outputIndex].value - estimatedFee,
+    value: tx.outs[outputIndex].value - estimatedFee
   });
 
   return {
@@ -316,19 +316,19 @@ function recaptureTransaction(
 function createP2MS(pks: string[], m: number, network: networks.Network) {
   const p2ms = payments.p2ms({
     m: m,
-    pubkeys: pks.map(pk => Buffer.from(pk, 'hex')),
-    network: network,
+    pubkeys: pks.map((pk) => Buffer.from(pk, "hex")),
+    network: network
   });
 
   const p2sh = payments.p2wsh({
     redeem: p2ms,
-    network: network,
+    network: network
   });
 
   return {
     address: p2sh.address,
     redeemScript: p2ms.output,
-    p2sh: p2sh,
+    p2sh: p2sh
   };
 }
 
@@ -343,7 +343,7 @@ export function depositP2SHTransaction(
   network: networks.Network,
   feeRate: number,
   pubKeys: string[],
-  m: number,
+  m: number
 ) {
   if (amount <= 0 || feeRate <= 0) {
     throw new Error("Amount and fee rate must be bigger than 0");
@@ -354,27 +354,27 @@ export function depositP2SHTransaction(
   const { selectedUTXOs, fee } = getDepositTxInputUTXOsAndFees(inputUTXOs, amount, feeRate, numOutputs);
 
   const psbt = new Psbt({ network });
-  selectedUTXOs.forEach(input => {
+  selectedUTXOs.forEach((input) => {
     psbt.addInput({
       hash: input.txid,
       index: input.vout,
       witnessUtxo: {
-        script: Buffer.from(input.scriptPubKey, 'hex'),
-        value: input.value,
+        script: Buffer.from(input.scriptPubKey, "hex"),
+        value: input.value
       },
-      redeemScript: p2ms.redeemScript,
+      redeemScript: p2ms.redeemScript
     });
   });
 
   psbt.addOutput({
     address: p2ms.address!,
-    value: amount,
+    value: amount
   });
 
   if (scripts.dataEmbedScript) {
     psbt.addOutput({
       script: scripts.dataEmbedScript,
-      value: 0,
+      value: 0
     });
   }
 
@@ -382,13 +382,13 @@ export function depositP2SHTransaction(
   if ((inputsSum - (amount + fee)) > BTC_DUST_SAT) {
     psbt.addOutput({
       address: changeAddress,
-      value: inputsSum - (amount + fee),
+      value: inputsSum - (amount + fee)
     });
   }
 
   return {
     psbt,
-    fee,
+    fee
   };
 }
 
@@ -413,15 +413,15 @@ export function sendP2SHTransaction(
     index: outputIndex,
     witnessUtxo: {
       value: depositTransaction.outs[0].value,
-      script: depositTransaction.outs[0].script,
+      script: depositTransaction.outs[0].script
     },
-    witnessScript: p2ms.redeemScript, // Adding witnessScript here
+    witnessScript: p2ms.redeemScript // Adding witnessScript here
     // redeemScript: p2ms.redeemScript, // Make sure to NOT set scriptSig, it should be empty for witness inputs
   });
 
   psbt.addOutput({
     address: sendAddress,
-    value: depositTransaction.outs[0].value - minimumFee,
+    value: depositTransaction.outs[0].value - minimumFee
   });
 
   return { psbt };
@@ -436,7 +436,7 @@ export function depositP2PKHTransaction(
   inputUTXOs: UTXO[],
   network: networks.Network,
   feeRate: number,
-  keyPair: any,
+  keyPair: any
 ) {
   // Check that amount and fee are bigger than 0
   if (amount <= 0 || feeRate <= 0) {
@@ -460,21 +460,21 @@ export function depositP2PKHTransaction(
     psbt.addInput({
       hash: input.txid,
       index: input.vout,
-      nonWitnessUtxo: Buffer.from(input.rawTransaction, 'hex'),
-      sequence: 0xfffffffd, // Enable locktime by setting the sequence value to (RBF-able)
+      nonWitnessUtxo: Buffer.from(input.rawTransaction, "hex"),
+      sequence: 0xfffffffd // Enable locktime by setting the sequence value to (RBF-able)
     });
   }
 
   psbt.addOutput({
     address: address!,
-    value: amount,
+    value: amount
   });
 
   if (scripts.dataEmbedScript) {
     // Add the data embed output to the transaction
     psbt.addOutput({
       script: scripts.dataEmbedScript,
-      value: 0,
+      value: 0
     });
   }
 
@@ -485,13 +485,13 @@ export function depositP2PKHTransaction(
   if ((inputsSum - (amount + fee)) > BTC_DUST_SAT) {
     psbt.addOutput({
       address: changeAddress,
-      value: inputsSum - (amount + fee),
+      value: inputsSum - (amount + fee)
     });
   }
 
   return {
     psbt,
-    fee,
+    fee
   }
 }
 
@@ -500,7 +500,7 @@ export function sendP2PKHTransaction(
   sendAddress: string,
   minimumFee: number,
   network: networks.Network,
-  outputIndex: number = 0,
+  outputIndex: number = 0
 ): { psbt: Psbt } {
   const psbt = new Psbt({ network });
 
@@ -513,7 +513,7 @@ export function sendP2PKHTransaction(
   psbt.addInput({
     hash: depositTransaction.getId(),
     index: outputIndex,
-    nonWitnessUtxo: Buffer.from(depositTransaction.toHex(), 'hex'),
+    nonWitnessUtxo: Buffer.from(depositTransaction.toHex(), "hex")
   });
 
   const inputAmount = output.value;
@@ -525,7 +525,7 @@ export function sendP2PKHTransaction(
 
   psbt.addOutput({
     address: sendAddress,
-    value: outputAmount,
+    value: outputAmount
   });
 
   return { psbt };

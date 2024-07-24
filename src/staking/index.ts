@@ -4,7 +4,7 @@ import {
   Psbt,
   Transaction,
   networks,
-  address,
+  address
 } from "bitcoinjs-lib";
 import { Taptree } from "bitcoinjs-lib/src/types";
 
@@ -17,7 +17,7 @@ import { StakingScripts } from "./types/StakingScripts";
 import { getEstimatedFee, inputValueSum, getStakingTxInputUTXOsAndFees } from "./utils/fee";
 
 export { initBTCCurve, StakingScriptData };
-export { type UTXO, type StakingScripts }; 
+export { type UTXO, type StakingScripts };
 
 // https://bips.xyz/370
 const BTC_LOCKTIME_HEIGHT_TIME_CUTOFF = 500000000;
@@ -54,7 +54,7 @@ const BTC_DUST_SAT = 546;
  * @param {number} feeRate - The fee rate in satoshis per byte.
  * @param {Buffer} [publicKeyNoCoord] - The public key if the wallet is in taproot mode.
  * @param {number} [lockHeight] - The optional block height locktime.
- * @returns {PsbtTransactionResult} The partially signed transaction and the fee.
+ * @return {PsbtTransactionResult} The partially signed transaction and the fee.
  * @throws Will throw an error if the amount or fee rate is less than or equal
  * to 0, if the change address is invalid, or if the public key is invalid.
  */
@@ -71,7 +71,7 @@ export function stakingTransaction(
   network: networks.Network,
   feeRate: number,
   publicKeyNoCoord?: Buffer,
-  lockHeight?: number,
+  lockHeight?: number
 ): PsbtTransactionResult {
   // Check that amount and fee are bigger than 0
   if (amount <= 0 || feeRate <= 0) {
@@ -106,39 +106,39 @@ export function stakingTransaction(
       index: input.vout,
       witnessUtxo: {
         script: Buffer.from(input.scriptPubKey, "hex"),
-        value: input.value,
+        value: input.value
       },
       // this is needed only if the wallet is in taproot mode
       ...(publicKeyNoCoord && { tapInternalKey: publicKeyNoCoord }),
-      sequence: 0xfffffffd, // Enable locktime by setting the sequence value to (RBF-able)
+      sequence: 0xfffffffd // Enable locktime by setting the sequence value to (RBF-able)
     });
   }
 
   const scriptTree: Taptree = [
     {
-      output: scripts.slashingScript,
+      output: scripts.slashingScript
     },
-    [{ output: scripts.unbondingScript }, { output: scripts.timelockScript }],
+    [{ output: scripts.unbondingScript }, { output: scripts.timelockScript }]
   ];
 
   // Create an pay-2-taproot (p2tr) output using the staking script
   const stakingOutput = payments.p2tr({
     internalPubkey,
     scriptTree,
-    network,
+    network
   });
 
   // Add the staking output to the transaction
   psbt.addOutput({
     address: stakingOutput.address!,
-    value: amount,
+    value: amount
   });
 
   if (scripts.dataEmbedScript) {
     // Add the data embed output to the transaction
     psbt.addOutput({
       script: scripts.dataEmbedScript,
-      value: 0,
+      value: 0
     });
   }
 
@@ -149,7 +149,7 @@ export function stakingTransaction(
   if ((inputsSum - (amount + fee)) > BTC_DUST_SAT) {
     psbt.addOutput({
       address: changeAddress,
-      value: inputsSum - (amount + fee),
+      value: inputsSum - (amount + fee)
     });
   }
 
@@ -192,7 +192,7 @@ export function stakingTransaction(
  * @param {networks.Network} network - The Bitcoin network.
  * @param {number} feeRate - The fee rate for the transaction in satoshis per byte.
  * @param {number} [outputIndex=0] - The index of the output to be spent in the original transaction.
- * @returns {PsbtTransactionResult} An object containing the partially signed transaction (PSBT).
+ * @return {PsbtTransactionResult} An object containing the partially signed transaction (PSBT).
  */
 export function withdrawEarlyUnbondedTransaction(
   scripts: {
@@ -203,25 +203,25 @@ export function withdrawEarlyUnbondedTransaction(
   withdrawalAddress: string,
   network: networks.Network,
   feeRate: number,
-  outputIndex: number = 0,
+  outputIndex: number = 0
 ): PsbtTransactionResult {
   const scriptTree: Taptree = [
     {
-      output: scripts.slashingScript,
+      output: scripts.slashingScript
     },
-    { output: scripts.unbondingTimelockScript },
+    { output: scripts.unbondingTimelockScript }
   ];
 
   return withdrawalTransaction(
     {
-      timelockScript: scripts.unbondingTimelockScript,
+      timelockScript: scripts.unbondingTimelockScript
     },
     scriptTree,
     tx,
     withdrawalAddress,
     network,
     feeRate,
-    outputIndex,
+    outputIndex
   );
 }
 
@@ -250,7 +250,7 @@ export function withdrawEarlyUnbondedTransaction(
  * @param {networks.Network} network - The Bitcoin network.
  * @param {number} feeRate - The fee rate for the transaction in satoshis per byte.
  * @param {number} [outputIndex=0] - The index of the output to be spent in the original transaction.
- * @returns {PsbtTransactionResult} An object containing the partially signed transaction (PSBT).
+ * @return {PsbtTransactionResult} An object containing the partially signed transaction (PSBT).
  */
 export function withdrawTimelockUnbondedTransaction(
   scripts: {
@@ -262,13 +262,13 @@ export function withdrawTimelockUnbondedTransaction(
   withdrawalAddress: string,
   network: networks.Network,
   feeRate: number,
-  outputIndex: number = 0,
+  outputIndex: number = 0
 ): PsbtTransactionResult {
   const scriptTree: Taptree = [
     {
-      output: scripts.slashingScript,
+      output: scripts.slashingScript
     },
-    [{ output: scripts.unbondingScript }, { output: scripts.timelockScript }],
+    [{ output: scripts.unbondingScript }, { output: scripts.timelockScript }]
   ];
 
   return withdrawalTransaction(
@@ -278,7 +278,7 @@ export function withdrawTimelockUnbondedTransaction(
     withdrawalAddress,
     network,
     feeRate,
-    outputIndex,
+    outputIndex
   );
 }
 
@@ -293,7 +293,7 @@ function withdrawalTransaction(
   withdrawalAddress: string,
   network: networks.Network,
   feeRate: number,
-  outputIndex: number = 0,
+  outputIndex: number = 0
 ): PsbtTransactionResult {
   // Check that withdrawal feeRate is bigger than 0
   if (feeRate <= 0) {
@@ -307,7 +307,7 @@ function withdrawalTransaction(
 
   // position of time in the timelock script
   const timePosition = 2;
-  const decompiled  = script.decompile(scripts.timelockScript);
+  const decompiled = script.decompile(scripts.timelockScript);
 
   if (!decompiled) {
     throw new Error("Timelock script is not valid");
@@ -327,20 +327,20 @@ function withdrawalTransaction(
 
   const redeem = {
     output: scripts.timelockScript,
-    redeemVersion: 192,
+    redeemVersion: 192
   };
 
   const p2tr = payments.p2tr({
     internalPubkey,
     scriptTree,
     redeem,
-    network,
+    network
   });
 
   const tapLeafScript = {
     leafVersion: redeem.redeemVersion,
     script: redeem.output,
-    controlBlock: p2tr.witness![p2tr.witness!.length - 1],
+    controlBlock: p2tr.witness![p2tr.witness!.length - 1]
   };
 
   const psbt = new Psbt({ network });
@@ -355,10 +355,10 @@ function withdrawalTransaction(
     tapInternalKey: internalPubkey,
     witnessUtxo: {
       value: tx.outs[outputIndex].value,
-      script: tx.outs[outputIndex].script,
+      script: tx.outs[outputIndex].script
     },
     tapLeafScript: [tapLeafScript],
-    sequence: timelock,
+    sequence: timelock
   });
 
   const outputValue = tx.outs[outputIndex].value;
@@ -370,7 +370,7 @@ function withdrawalTransaction(
   console.log(`estimatedFee ${estimatedFee}, value`, tx.outs[outputIndex].value);
   psbt.addOutput({
     address: withdrawalAddress,
-    value: tx.outs[outputIndex].value - estimatedFee,
+    value: tx.outs[outputIndex].value - estimatedFee
   });
 
   return {
@@ -409,7 +409,7 @@ function withdrawalTransaction(
  * @param {number} minimumFee - The minimum fee for the transaction in satoshis.
  * @param {networks.Network} network - The Bitcoin network.
  * @param {number} [outputIndex=0] - The index of the output to be spent in the original transaction.
- * @returns {{ psbt: Psbt }} An object containing the partially signed transaction (PSBT).
+ * @return {{ psbt: Psbt }} An object containing the partially signed transaction (PSBT).
  */
 export function slashTimelockUnbondedTransaction(
   scripts: {
@@ -423,18 +423,18 @@ export function slashTimelockUnbondedTransaction(
   slashingRate: number,
   minimumFee: number,
   network: networks.Network,
-  outputIndex: number = 0,
+  outputIndex: number = 0
 ): { psbt: Psbt } {
   const slashingScriptTree: Taptree = [
     {
-      output: scripts.slashingScript,
+      output: scripts.slashingScript
     },
-    [{ output: scripts.unbondingScript }, { output: scripts.timelockScript }],
+    [{ output: scripts.unbondingScript }, { output: scripts.timelockScript }]
   ];
   return slashingTransaction(
     {
       unbondingTimelockScript: scripts.unbondingTimelockScript,
-      slashingScript: scripts.slashingScript,
+      slashingScript: scripts.slashingScript
     },
     slashingScriptTree,
     stakingTransaction,
@@ -442,7 +442,7 @@ export function slashTimelockUnbondedTransaction(
     slashingRate,
     minimumFee,
     network,
-    outputIndex,
+    outputIndex
   );
 }
 
@@ -477,7 +477,7 @@ export function slashTimelockUnbondedTransaction(
  * @param {number} minimumFee - The minimum fee for the transaction in satoshis.
  * @param {networks.Network} network - The Bitcoin network.
  * @param {number} [outputIndex=0] - The index of the output to be spent in the original transaction.
- * @returns {{ psbt: Psbt }} An object containing the partially signed transaction (PSBT).
+ * @return {{ psbt: Psbt }} An object containing the partially signed transaction (PSBT).
  */
 export function slashEarlyUnbondedTransaction(
   scripts: {
@@ -489,20 +489,20 @@ export function slashEarlyUnbondedTransaction(
   slashingRate: number,
   minimumFee: number,
   network: networks.Network,
-  outputIndex: number = 0,
+  outputIndex: number = 0
 ): { psbt: Psbt } {
   const unbondingScriptTree: Taptree = [
     {
-      output: scripts.slashingScript,
+      output: scripts.slashingScript
     },
     {
       output: scripts.unbondingTimelockScript
-    },
+    }
   ];
   return slashingTransaction(
     {
       unbondingTimelockScript: scripts.unbondingTimelockScript,
-      slashingScript: scripts.slashingScript,
+      slashingScript: scripts.slashingScript
     },
     unbondingScriptTree,
     stakingTransaction,
@@ -510,7 +510,7 @@ export function slashEarlyUnbondedTransaction(
     slashingRate,
     minimumFee,
     network,
-    outputIndex,
+    outputIndex
   );
 }
 
@@ -542,7 +542,7 @@ export function slashEarlyUnbondedTransaction(
  * @param {number} minimumFee - The minimum fee for the transaction in satoshis.
  * @param {networks.Network} network - The Bitcoin network.
  * @param {number} [outputIndex=0] - The index of the output to be spent in the original transaction.
- * @returns {{ psbt: Psbt }} An object containing the partially signed transaction (PSBT).
+ * @return {{ psbt: Psbt }} An object containing the partially signed transaction (PSBT).
  */
 function slashingTransaction(
   scripts: {
@@ -555,7 +555,7 @@ function slashingTransaction(
   slashingRate: number,
   minimumFee: number,
   network: networks.Network,
-  outputIndex: number = 0,
+  outputIndex: number = 0
 ): {
   psbt: Psbt
 } {
@@ -571,20 +571,20 @@ function slashingTransaction(
 
   const redeem = {
     output: scripts.slashingScript,
-    redeemVersion: 192,
+    redeemVersion: 192
   };
 
   const p2tr = payments.p2tr({
     internalPubkey,
     scriptTree,
     redeem,
-    network,
+    network
   });
 
   const tapLeafScript = {
     leafVersion: redeem.redeemVersion,
     script: redeem.output,
-    controlBlock: p2tr.witness![p2tr.witness!.length - 1],
+    controlBlock: p2tr.witness![p2tr.witness!.length - 1]
   };
 
   const psbt = new Psbt({ network });
@@ -594,9 +594,9 @@ function slashingTransaction(
     tapInternalKey: internalPubkey,
     witnessUtxo: {
       value: transaction.outs[0].value,
-      script: transaction.outs[0].script,
+      script: transaction.outs[0].script
     },
-    tapLeafScript: [tapLeafScript],
+    tapLeafScript: [tapLeafScript]
   });
 
   const userValue = transaction.outs[0].value * (1 - slashingRate) - minimumFee;
@@ -610,20 +610,20 @@ function slashingTransaction(
   // Add the slashing output
   psbt.addOutput({
     address: slashingAddress,
-    value: transaction.outs[0].value * slashingRate,
+    value: transaction.outs[0].value * slashingRate
   });
 
   // Change output contains unbonding timelock script
   const changeOutput = payments.p2tr({
     internalPubkey,
     scriptTree: { output: scripts.unbondingTimelockScript },
-    network,
+    network
   });
 
   // Add the change output
   psbt.addOutput({
     address: changeOutput.address!,
-    value: transaction.outs[0].value * (1 - slashingRate) - minimumFee,
+    value: transaction.outs[0].value * (1 - slashingRate) - minimumFee
   });
 
   return { psbt };
@@ -639,7 +639,7 @@ export function unbondingTransaction(
   stakingTx: Transaction,
   transactionFee: number,
   network: networks.Network,
-  outputIndex: number = 0,
+  outputIndex: number = 0
 ): {
   psbt: Psbt
 } {
@@ -656,27 +656,27 @@ export function unbondingTransaction(
   // Build input tapleaf script
   const inputScriptTree: Taptree = [
     {
-      output: scripts.slashingScript,
+      output: scripts.slashingScript
     },
-    [{ output: scripts.unbondingScript }, { output: scripts.timelockScript }],
+    [{ output: scripts.unbondingScript }, { output: scripts.timelockScript }]
   ];
 
   const inputRedeem = {
     output: scripts.unbondingScript,
-    redeemVersion: 192,
+    redeemVersion: 192
   };
 
   const p2tr = payments.p2tr({
     internalPubkey,
     scriptTree: inputScriptTree,
     redeem: inputRedeem,
-    network,
+    network
   });
 
   const inputTapLeafScript = {
     leafVersion: inputRedeem.redeemVersion,
     script: inputRedeem.output,
-    controlBlock: p2tr.witness![p2tr.witness!.length - 1],
+    controlBlock: p2tr.witness![p2tr.witness!.length - 1]
   };
 
   const psbt = new Psbt({ network });
@@ -686,29 +686,29 @@ export function unbondingTransaction(
     tapInternalKey: internalPubkey,
     witnessUtxo: {
       value: stakingTx.outs[0].value,
-      script: stakingTx.outs[0].script,
+      script: stakingTx.outs[0].script
     },
-    tapLeafScript: [inputTapLeafScript],
+    tapLeafScript: [inputTapLeafScript]
   });
 
   // Build output tapleaf script
   const outputScriptTree: Taptree = [
     {
-      output: scripts.slashingScript,
+      output: scripts.slashingScript
     },
-    { output: scripts.unbondingTimelockScript },
+    { output: scripts.unbondingTimelockScript }
   ];
 
   const unbondingOutput = payments.p2tr({
     internalPubkey,
     scriptTree: outputScriptTree,
-    network,
+    network
   });
 
   // Add the unbonding output
   psbt.addOutput({
     address: unbondingOutput.address!,
-    value: stakingTx.outs[0].value - transactionFee,
+    value: stakingTx.outs[0].value - transactionFee
   });
 
   return {
@@ -723,12 +723,12 @@ export const createWitness = (
   covenantSigs: {
     btc_pk_hex: string;
     sig_hex: string;
-  }[],
+  }[]
 ) => {
   // map API response to Buffer values
   const covenantSigsBuffers = covenantSigs.map((sig) => ({
     btc_pk_hex: Buffer.from(sig.btc_pk_hex, "hex"),
-    sig_hex: Buffer.from(sig.sig_hex, "hex"),
+    sig_hex: Buffer.from(sig.sig_hex, "hex")
   }));
   // we need covenant from params to be sorted in reverse order
   const paramsCovenantsSorted = [...paramsCovenants]
@@ -738,7 +738,7 @@ export const createWitness = (
     // in case there's covenant with this btc_pk_hex we return the sig
     // otherwise we return empty Buffer
     const covenantSig = covenantSigsBuffers.find(
-      (sig) => sig.btc_pk_hex.compare(covenant) === 0,
+      (sig) => sig.btc_pk_hex.compare(covenant) === 0
     );
     return covenantSig?.sig_hex || Buffer.alloc(0);
   });
@@ -762,7 +762,7 @@ export const createWitness = (
  * @param {UTXO[]} inputUTXOs - Array of UTXOs to be used as inputs.
  * @param {Buffer} [publicKeyNoCoord] - Optional public key without coordinates.
  * @param {number} [lockHeight] - Optional lock height for the transaction.
- * @returns {PsbtTransactionResult} - The result containing the PSBT transaction and additional data.
+ * @return {PsbtTransactionResult} - The result containing the PSBT transaction and additional data.
  */
 export function continueTimelockStakingTransaction(
   scripts: {
@@ -779,14 +779,14 @@ export function continueTimelockStakingTransaction(
   changeAddress: string,
   inputUTXOs: UTXO[],
   publicKeyNoCoord?: Buffer,
-  lockHeight?: number,
+  lockHeight?: number
 ): PsbtTransactionResult {
   // Create script tree for Taproot
   const scriptTree: Taptree = [
     {
-      output: scripts.slashingScript,
+      output: scripts.slashingScript
     },
-    [{ output: scripts.unbondingScript }, { output: scripts.timelockScript }],
+    [{ output: scripts.unbondingScript }, { output: scripts.timelockScript }]
   ];
 
   // Basic validation checks
@@ -817,7 +817,7 @@ export function continueTimelockStakingTransaction(
 
   const redeem = {
     output: scripts.timelockScript,
-    redeemVersion: 192,
+    redeemVersion: 192
   };
 
   // Generate Taproot payment output
@@ -825,13 +825,13 @@ export function continueTimelockStakingTransaction(
     internalPubkey,
     scriptTree,
     redeem,
-    network,
+    network
   });
 
   const tapLeafScript = {
     leafVersion: redeem.redeemVersion,
     script: redeem.output,
-    controlBlock: p2tr.witness![p2tr.witness!.length - 1],
+    controlBlock: p2tr.witness![p2tr.witness!.length - 1]
   };
 
   const psbt = new Psbt({ network });
@@ -846,10 +846,10 @@ export function continueTimelockStakingTransaction(
     tapInternalKey: internalPubkey,
     witnessUtxo: {
       value: tx.outs[outputIndex].value,
-      script: tx.outs[outputIndex].script,
+      script: tx.outs[outputIndex].script
     },
     tapLeafScript: [tapLeafScript],
-    sequence: timelock,
+    sequence: timelock
   });
 
   // Validate output value
@@ -887,24 +887,24 @@ export function continueTimelockStakingTransaction(
       index: input.vout,
       witnessUtxo: {
         script: Buffer.from(input.scriptPubKey, "hex"),
-        value: input.value,
+        value: input.value
       },
       ...(publicKeyNoCoord && { tapInternalKey: publicKeyNoCoord }),
-      sequence: 0xfffffffd, // RBF sequence
+      sequence: 0xfffffffd // RBF sequence
     });
   }
 
   // Add staking output
   psbt.addOutput({
     address: p2tr.address!,
-    value: amount,
+    value: amount
   });
 
   // Add data embed output if present
   if (scripts.dataEmbedScript) {
     psbt.addOutput({
       script: scripts.dataEmbedScript,
-      value: 0,
+      value: 0
     });
   }
 
@@ -914,7 +914,7 @@ export function continueTimelockStakingTransaction(
   if (changeAmount > BTC_DUST_SAT) {
     psbt.addOutput({
       address: changeAddress,
-      value: changeAmount,
+      value: changeAmount
     });
   }
 
@@ -949,7 +949,7 @@ export function continueUnbondingStakingTransaction(
   inputUTXOs: UTXO[],
   feeRate: number,
   publicKeyNoCoord?: Buffer,
-  lockHeight?: number,
+  lockHeight?: number
 ): PsbtTransactionResult {
   // Check that transaction fee is bigger than 0
   if (transactionFee <= 0) {
@@ -964,27 +964,27 @@ export function continueUnbondingStakingTransaction(
   // Build input tapleaf script
   const inputScriptTree: Taptree = [
     {
-      output: scripts.slashingScript,
+      output: scripts.slashingScript
     },
-    [{ output: scripts.unbondingScript }, { output: scripts.timelockScript }],
+    [{ output: scripts.unbondingScript }, { output: scripts.timelockScript }]
   ];
 
   const inputRedeem = {
     output: scripts.unbondingScript,
-    redeemVersion: 192,
+    redeemVersion: 192
   };
 
   const p2tr = payments.p2tr({
     internalPubkey,
     scriptTree: inputScriptTree,
     redeem: inputRedeem,
-    network,
+    network
   });
 
   const inputTapLeafScript = {
     leafVersion: inputRedeem.redeemVersion,
     script: inputRedeem.output,
-    controlBlock: p2tr.witness![p2tr.witness!.length - 1],
+    controlBlock: p2tr.witness![p2tr.witness!.length - 1]
   };
 
   const psbt = new Psbt({ network });
@@ -994,24 +994,24 @@ export function continueUnbondingStakingTransaction(
     tapInternalKey: internalPubkey,
     witnessUtxo: {
       value: stakingTx.outs[0].value,
-      script: stakingTx.outs[0].script,
+      script: stakingTx.outs[0].script
     },
-    tapLeafScript: [inputTapLeafScript],
+    tapLeafScript: [inputTapLeafScript]
   }
   psbt.addInput(originStakingOutput);
 
   // Build output tapleaf script
   const outputScriptTree: Taptree = [
     {
-      output: scripts.slashingScript,
+      output: scripts.slashingScript
     },
-    [{ output: scripts.unbondingScript }, { output: scripts.timelockScript }],
+    [{ output: scripts.unbondingScript }, { output: scripts.timelockScript }]
   ];
 
   const stakingOutput = payments.p2tr({
     internalPubkey,
     scriptTree: outputScriptTree,
-    network,
+    network
   });
 
   const amount = stakingTx.outs[0].value - transactionFee + additionalAmount;
@@ -1043,14 +1043,14 @@ export function continueUnbondingStakingTransaction(
     // Add the unbonding output
   psbt.addOutput({
     address: stakingOutput.address!,
-    value: amount, // amount
+    value: amount // amount
   });
 
   if (scripts.dataEmbedScript) {
     // Add the data embed output to the transaction
     psbt.addOutput({
       script: scripts.dataEmbedScript,
-      value: 0,
+      value: 0
     });
   }
 
