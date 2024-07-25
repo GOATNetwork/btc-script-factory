@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import { StakingScripts } from "../types/StakingScripts";
 export declare const PK_LENGTH = 32;
 export declare class StakingScriptData {

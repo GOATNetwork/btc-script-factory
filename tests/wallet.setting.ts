@@ -9,6 +9,6 @@ export function buildBitcoinCoreWallet(walletName: string) {
     return new BitcoinCoreWallet(walletName, host, port, username, password, network);
 }
 
-export function buildDefaultBitcoinCoreWallet() {
-    return buildBitcoinCoreWallet("alice");
+export function buildDefaultBitcoinCoreWallet(name: string = "alice") {
+    return buildBitcoinCoreWallet(name);
 }

@@ -26,8 +26,7 @@ const signPsbtFromBase64 = async (psbtBase64: string, ecPairs: any[], shouldExtr
         psbt.finalizeAllInputs();
         const transaction = psbt.extractTransaction();
         return transaction.toHex();
-    }
-    else {
+    } else {
         return psbt.toBase64();
     }
 }

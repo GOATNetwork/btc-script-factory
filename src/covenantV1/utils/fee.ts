@@ -1,14 +1,17 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.getDepositTxInputUTXOsAndFees = exports.inputValueSum = exports.getEstimatedFee = exports.ESTIMATED_OP_RETURN_SIZE = exports.TX_BUFFER_SIZE_FOR_FEE_CAL = exports.OUTPUT_SIZE_FOR_FEE_CAL = exports.INPUT_SIZE_FOR_FEE_CAL = void 0;
+import { UTXO } from "../types/UTXO";
+
 // Estimated size of a transaction input in bytes for fee calculation purpose only
-exports.INPUT_SIZE_FOR_FEE_CAL = 180;
+export const INPUT_SIZE_FOR_FEE_CAL = 180;
+
 // Estimated size of a transaction output in bytes for fee calculation purpose only
-exports.OUTPUT_SIZE_FOR_FEE_CAL = 34;
+export const OUTPUT_SIZE_FOR_FEE_CAL = 34;
+
 // Buffer size for a transaction in bytes for fee calculation purpose only
-exports.TX_BUFFER_SIZE_FOR_FEE_CAL = 10;
+export const TX_BUFFER_SIZE_FOR_FEE_CAL = 10;
+
 // Estimated size of an OP_RETURN output in bytes for fee calculation purpose only
-exports.ESTIMATED_OP_RETURN_SIZE = 40;
+export const ESTIMATED_OP_RETURN_SIZE = 40;
+
 /**
  * Calculates the estimated transaction fee using a heuristic formula.
  *
@@ -27,30 +30,44 @@ exports.ESTIMATED_OP_RETURN_SIZE = 40;
  * @param {number} numOutputs - The number of outputs in the transaction.
  * @return {number} The estimated transaction fee in satoshis.
  */
-const getEstimatedFee = (feeRate, numInputs, numOutputs) => {
-    return (numInputs * exports.INPUT_SIZE_FOR_FEE_CAL +
-        numOutputs * exports.OUTPUT_SIZE_FOR_FEE_CAL +
-        exports.TX_BUFFER_SIZE_FOR_FEE_CAL + numInputs + exports.ESTIMATED_OP_RETURN_SIZE) * feeRate;
-};
-exports.getEstimatedFee = getEstimatedFee;
+export const getEstimatedFee = (
+    feeRate: number, numInputs: number, numOutputs: number
+): number => {
+    return (
+        numInputs * INPUT_SIZE_FOR_FEE_CAL +
+        numOutputs * OUTPUT_SIZE_FOR_FEE_CAL +
+        TX_BUFFER_SIZE_FOR_FEE_CAL + numInputs + ESTIMATED_OP_RETURN_SIZE
+    ) * feeRate;
+}
+
 // inputValueSum returns the sum of the values of the UTXOs
-const inputValueSum = (inputUTXOs) => {
+export const inputValueSum = (inputUTXOs: UTXO[]): number => {
     return inputUTXOs.reduce((acc, utxo) => acc + utxo.value, 0);
-};
-exports.inputValueSum = inputValueSum;
-const getDepositTxInputUTXOsAndFees = (availableUTXOs, depositAmount, feeRate, numOfOutputs) => {
+}
+
+export const getDepositTxInputUTXOsAndFees = (
+    availableUTXOs: UTXO[],
+    depositAmount: number,
+    feeRate: number,
+    numOfOutputs: number
+): {
+    selectedUTXOs: UTXO[],
+    fee: number,
+} => {
     if (availableUTXOs.length === 0) {
         throw new Error("Insufficient funds");
     }
     // Sort available UTXOs from highest to lowest value
     availableUTXOs.sort((a, b) => b.value - a.value);
-    let selectedUTXOs = [];
+
+    let selectedUTXOs: UTXO[] = [];
     let accumulatedValue = 0;
     let estimatedFee;
+
     for (const utxo of availableUTXOs) {
         selectedUTXOs.push(utxo);
         accumulatedValue += utxo.value;
-        estimatedFee = (0, exports.getEstimatedFee)(feeRate, selectedUTXOs.length, numOfOutputs);
+        estimatedFee = getEstimatedFee(feeRate, selectedUTXOs.length, numOfOutputs);
         // console.log(`estimatedFee ${estimatedFee}, feeRate ${feeRate}, accumulatedValue ${accumulatedValue}, ${numOfOutputs}`);
         if (accumulatedValue >= depositAmount + estimatedFee) {
             break;
@@ -59,12 +76,14 @@ const getDepositTxInputUTXOsAndFees = (availableUTXOs, depositAmount, feeRate, n
     if (!estimatedFee) {
         throw new Error("Unable to calculate fee.");
     }
+
+    console.log(`selectedUTXOs ${selectedUTXOs.length}, accumulatedValue ${accumulatedValue}, estimatedFee ${estimatedFee}`)
     if (accumulatedValue < depositAmount + estimatedFee) {
         throw new Error("Insufficient funds: unable to gather enough UTXOs to cover the deposit amount and fees.");
     }
+
     return {
         selectedUTXOs,
         fee: estimatedFee
     };
-};
-exports.getDepositTxInputUTXOsAndFees = getDepositTxInputUTXOsAndFees;
+}
