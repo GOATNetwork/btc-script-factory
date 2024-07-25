@@ -1,53 +1,49 @@
-import BIP32Factory from 'bip32';
-import * as ecc from 'tiny-secp256k1';
-import ECPairFactory from 'ecpair';
-import {initEccLib, networks, payments, Psbt, Transaction} from 'bitcoinjs-lib';
-import * as bridge from "../src/bridge";
-import {BitcoinCoreWallet} from "walletprovider-ts/lib/providers/bitcoin_core_wallet";
-import {buildDefaultBitcoinCoreWallet} from './wallet.setting'
+import BIP32Factory from "bip32";
+import * as ecc from "tiny-secp256k1";
+import { initEccLib, networks, Psbt, Transaction } from "bitcoinjs-lib";
+import { BitcoinCoreWallet } from "walletprovider-ts/lib/providers/bitcoin_core_wallet";
+import { buildDefaultBitcoinCoreWallet } from "./wallet.setting"
 import { buildDepositScript } from "../src/bridgeV1/utils/script";
 import { depositTransaction } from "../src/bridgeV1";
 
 const bip32 = BIP32Factory(ecc);
-//import * as assert from 'assert';
-const ECPair = ECPairFactory(ecc);
-
+// import * as assert from 'assert';
 const network = networks.regtest;
 
-const bip39 = require('bip39')
-//const rng = require("randombytes");
+const bip39 = require("bip39")
+// const rng = require("randombytes");
 
 initEccLib(ecc);
 
 const DEPOSIT_TIMELOCK = 20;
-const ethAddress = '0x1234567890abcdef1234567890abcdef12345678';
+const ethAddress = "0x1234567890abcdef1234567890abcdef12345678";
 
 const mnemonicArray = [
     "worth pottery emotion apology alone coast evil tortoise calm normal cotton how",
     "worth pottery emotion apology alone coast evil tortoise calm normal cotton are",
     "worth pottery emotion apology alone coast evil tortoise calm normal cotton you",
-    "worth pottery emotion apology alone coast evil tortoise calm normal cotton hello",
+    "worth pottery emotion apology alone coast evil tortoise calm normal cotton hello"
 ];
 
 async function deriveKey(mnemonic: string) {
     // Verify the above (Below is no different than other HD wallets)
 
-    //let mnemonic = "worth pottery emotion apology alone coast evil tortoise calm normal cotton exchange";
+    // let mnemonic = "worth pottery emotion apology alone coast evil tortoise calm normal cotton exchange";
     const seed = await bip39.mnemonicToSeed(mnemonic);
 
-    //const rootKey = bip32.fromSeed(rng(64), network);
+    // const rootKey = bip32.fromSeed(rng(64), network);
     const rootKey = bip32.fromSeed(seed, network);
     // https://github.com/bitcoinjs/bip32/blob/master/test/index.js
-    //const path = `m/86'/0'/0'/0/0`; // Path to first child of receiving wallet on first account
+    // const path = `m/86'/0'/0'/0/0`; // Path to first child of receiving wallet on first account
     const path = "m/84'/1'/0'/0/0";
     return rootKey.derivePath(path);
 }
 
 const lockingAmount = 5e7; // Satoshi
 async function initAccount(numCovenants: number): Promise<any[]> {
-    var accounts = new Array(numCovenants);
+    let accounts = new Array(numCovenants);
     // operator, covenants...covenants+numConv
-    for (var i = 0; i < accounts.length; i++) {
+    for (let i = 0; i < accounts.length; i++) {
         accounts[i] = await deriveKey(mnemonicArray[i]);
     }
     return accounts;
@@ -68,25 +64,27 @@ class DepositProtocol {
     }
 
     async buildScripts() {
-      const posPubkey = 'd6ce14162f3954bac0fff55a12b6df7d614801f358b5d910fe7986a47102e657'
+      const posPubkey = "d6ce14162f3954bac0fff55a12b6df7d614801f358b5d910fe7986a47102e657"
       const depositScript = buildDepositScript(
-        ethAddress.startsWith("0x")
-          ? Buffer.from(ethAddress.slice(2), 'hex')
-          : Buffer.from(ethAddress, 'hex'),
-        Buffer.from(posPubkey, 'hex'),
+        ethAddress.startsWith("0x") ?
+          Buffer.from(ethAddress.slice(2), "hex") :
+          Buffer.from(ethAddress, "hex"),
+        Buffer.from(posPubkey, "hex")
       );
         this.scripts = {
-          depositScript,
+          depositScript
         }
         return {
           posPubkey,
           ethAddress,
-          scripts: this.scripts,
+          scripts: this.scripts
         }
     }
 
   async deposit() {
     const { posPubkey, ethAddress, scripts } = await this.buildScripts();
+    console.log("posPubkey: ", posPubkey);
+    console.log("ethAddress", ethAddress);
 
     const changeAddress = await this.wallet.getAddress();
     const inputUTXOs = await this.wallet.getUtxos(changeAddress);
@@ -98,8 +96,9 @@ class DepositProtocol {
       changeAddress,
       inputUTXOs,
       network,
-      feeRate,
+      feeRate
     );
+    console.log("fee: ", fee)
 
     const signedDepositPsbtHex = await this.wallet.signPsbt(psbt.toHex());
     const signedDepositPsbt = Psbt.fromHex(signedDepositPsbtHex);
@@ -119,11 +118,10 @@ class DepositProtocol {
     async send() {
         await this.mine(20, await this.wallet.getAddress());
         console.log("Send");
-        let {fastestFee} = await this.wallet.getNetworkFees();
-        let depositOutputIndex = 0;
+        let { fastestFee } = await this.wallet.getNetworkFees();
+        // let depositOutputIndex = 0;
         let sendAddress = "bcrt1q7gjfeaydr8edeupkw3encq8pksnalvnda5yakt";
         console.log(`fastestFee ${fastestFee}, send address ${sendAddress}`)
-
     }
 
     async check_balance() {
@@ -142,8 +140,8 @@ class DepositProtocol {
         let utxos = await this.wallet.getUtxos(walletAddress, value);
 
         let change = 0;
-        let psbt = new Psbt({network});
-        for (var utxoIndex = 0; utxoIndex < utxos.length; utxoIndex++) {
+        let psbt = new Psbt({ network });
+        for (let utxoIndex = 0; utxoIndex < utxos.length; utxoIndex++) {
             console.log("Utxo[0]: ", utxos[utxoIndex]);
 
             let prevTxData = await this.wallet.getTransaction(utxos[utxoIndex].txid);
@@ -153,7 +151,7 @@ class DepositProtocol {
             psbt.addInput({
                 hash: utxos[utxoIndex].txid,
                 index: utxos[utxoIndex].vout,
-                nonWitnessUtxo: Buffer.from(prevTxData, "hex"),
+                nonWitnessUtxo: Buffer.from(prevTxData, "hex")
             });
 
             change += utxos[utxoIndex].value;
@@ -165,12 +163,12 @@ class DepositProtocol {
         psbt.addOutputs(
             [{
                 address: receiver,
-                value,
+                value
             },
                 {
                     address: walletAddress, // change address
-                    value: change - 45000,
-                },
+                    value: change - 45000
+                }
             ]);
 
         let privateKey = await this.wallet.dumpPrivKey();
@@ -215,8 +213,6 @@ async function run() {
       await bridgeProtocol.check_balance();
       await bridgeProtocol.send();
     }
-
-
 }
 
 run().then(() => {
