@@ -6,14 +6,13 @@ import {
 } from "bitcoinjs-lib";
 
 import { initBTCCurve } from "./utils/curve";
-import { BridgeV1ScriptData } from "./utils/bridgeV1Script";
+import { buildDepositScript } from "./utils/script";
 import { UTXO } from "./types/UTXO";
 import { inputValueSum, getDepositTxInputUTXOsAndFees } from "./utils/fee";
 
-export { initBTCCurve, BridgeV1ScriptData };
+export { initBTCCurve, buildDepositScript };
 
 // https://bips.xyz/370
-const BTC_LOCKTIME_HEIGHT_TIME_CUTOFF = 500000000;
 const BTC_DUST_SAT = 546;
 
 export function depositTransaction(
@@ -24,9 +23,7 @@ export function depositTransaction(
   changeAddress: string,
   inputUTXOs: UTXO[],
   network: networks.Network,
-  feeRate: number,
-  publicKeyNoCoord?: Buffer,
-  lockHeight?: number
+  feeRate: number
   ) {
   if (amount <= 0 || feeRate <= 0) {
     throw new Error("Amount and fee rate must be bigger than 0");
@@ -35,10 +32,7 @@ export function depositTransaction(
   const psbt = new Psbt({ network });
 
   const p2wsh = payments.p2wsh({
-    redeem: payments.p2ms({
-      output: scripts.depositScript,
-      network
-    }),
+    redeem: { output: scripts.depositScript, network },
     network
   });
 
@@ -52,7 +46,7 @@ export function depositTransaction(
         script: Buffer.from(input.scriptPubKey, "hex"),
         value: input.value
       },
-      redeemScript: p2wsh.redeem!.output,
+      redeemScript: scripts.depositScript,
       sequence: 0xfffffffd // Enable locktime by setting the sequence value to (RBF-able)
     });
   });
@@ -69,13 +63,6 @@ export function depositTransaction(
       address: changeAddress,
       value: inputsSum - (amount + fee)
     });
-  }
-
-  if (lockHeight) {
-    if (lockHeight >= BTC_LOCKTIME_HEIGHT_TIME_CUTOFF) {
-      throw new Error("Invalid lock height");
-    }
-    psbt.setLocktime(lockHeight);
   }
 
   return {
