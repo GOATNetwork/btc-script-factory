@@ -5,6 +5,7 @@ import * as staking from "../src/staking";
 import * as stakingScript from "../src/staking/utils/stakingScript";
 import { BitcoinCoreWallet } from "walletprovider-ts/lib/providers/bitcoin_core_wallet";
 import { buildDefaultBitcoinCoreWallet } from "./wallet.setting"
+import { signPsbtFromBase64 } from "./signpsbt";
 
 const bip32 = BIP32Factory(ecc);
 // import * as assert from 'assert';
@@ -102,6 +103,7 @@ class StakingProtocol {
         let { psbt } = staking.stakingTransaction(this.scripts, lockingAmount, changeAddress, inputUTXOs, network, feeRate, publicKeyNoCoord, lockHeight);
 
         console.log("psbt base64:", psbt.toBase64())
+        await this.wallet.walletPassphrase("btcstaker", 1000);
         const signedStakingPsbtHex = await this.wallet.signPsbt(psbt.toHex());
         console.log("walltet signPsbt", signedStakingPsbtHex);
         let signedStakingPsbt = Psbt.fromHex(signedStakingPsbtHex);
@@ -151,7 +153,7 @@ class StakingProtocol {
             this.covenants[1],
             this.covenants[2]
         ];
-        const signedStakingPsbtHex = await this.wallet.signPsbtFromBase64(unsignedUnbondingPsbt.psbt.toBase64(), keyPairs, true);
+        const signedStakingPsbtHex = await signPsbtFromBase64(unsignedUnbondingPsbt.psbt.toBase64(), keyPairs, true);
 
         // sign transaction by covenants
         this.check_balance();
@@ -184,7 +186,7 @@ class StakingProtocol {
             await this.wallet.dumpPrivKey()
         ];
 
-        const signedStakingPsbtHex = await this.wallet.signPsbtFromBase64(unsignedWithdrawalPsbt.psbt.toBase64(), keyPairs, true);
+        const signedStakingPsbtHex = await signPsbtFromBase64(unsignedWithdrawalPsbt.psbt.toBase64(), keyPairs, true);
 
         console.log("pushTx", signedStakingPsbtHex);
         this.check_balance();
@@ -212,7 +214,7 @@ class StakingProtocol {
         console.log("signPsbt");
 
         let keyPairs = [await this.wallet.dumpPrivKey()];
-        const signedStakingPsbtHex = await this.wallet.signPsbtFromBase64(unsignedWithdrawalPsbt.psbt.toBase64(), keyPairs, true);
+        const signedStakingPsbtHex = await signPsbtFromBase64(unsignedWithdrawalPsbt.psbt.toBase64(), keyPairs, true);
 
         console.log("pushTx", signedStakingPsbtHex);
         this.check_balance();
@@ -284,7 +286,7 @@ class StakingProtocol {
             this.covenants[2]
         ];
         console.log("signPsbt");
-        const signedStakingPsbtHex = await this.wallet.signPsbtFromBase64(slashTimelockUnbondedPsbt.psbt.toBase64(), keyPairs, true);
+        const signedStakingPsbtHex = await signPsbtFromBase64(slashTimelockUnbondedPsbt.psbt.toBase64(), keyPairs, true);
 
         console.log("pushTx", signedStakingPsbtHex);
         this.check_balance();
@@ -473,7 +475,7 @@ class StakingProtocol {
         console.log("PSBT signed and finalized.");
         */
 
-        const signedStakingPsbtHex = await this.wallet.signPsbtFromBase64(psbt.toBase64(), keyPairs, true);
+        const signedStakingPsbtHex = await signPsbtFromBase64(psbt.toBase64(), keyPairs, true);
         console.log("mutiSign done")
         console.log("Mining additional blocks before pushing transaction.");
         await this.mine(10, await this.wallet.getAddress());
@@ -526,11 +528,9 @@ async function run() {
 
     await stakingProtocol.check_balance();
     // send token to staker
-    /*
-   await stakingProtocol.fuel(await getAddress(stakingProtocol.covenants[0]));
-   await stakingProtocol.fuel(await getAddress(stakingProtocol.covenants[1]));
-   await stakingProtocol.fuel(await getAddress(stakingProtocol.covenants[2]));
-     */
+    // await stakingProtocol.fuel(await getAddress(stakingProtocol.covenants[0]));
+    // await stakingProtocol.fuel(await getAddress(stakingProtocol.covenants[1]));
+    // await stakingProtocol.fuel(await getAddress(stakingProtocol.covenants[2]));
 
     await stakingProtocol.check_balance();
 
@@ -607,4 +607,4 @@ async function run() {
 run().then(() => {
     console.log("Done");
     process.exit()
-})
+});

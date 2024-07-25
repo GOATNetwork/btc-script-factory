@@ -6,7 +6,7 @@ import {
 } from "bitcoinjs-lib";
 
 import { initBTCCurve } from "./utils/curve";
-import { buildDepositScript } from "./utils/script";
+import { buildDepositScript } from "./utils/bridge.script";
 import { UTXO } from "./types/UTXO";
 import { inputValueSum, getDepositTxInputUTXOsAndFees } from "./utils/fee";
 

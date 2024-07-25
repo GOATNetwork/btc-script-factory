@@ -3,8 +3,9 @@ import * as ecc from "tiny-secp256k1";
 import { initEccLib, networks, Psbt, Transaction } from "bitcoinjs-lib";
 import { BitcoinCoreWallet } from "walletprovider-ts/lib/providers/bitcoin_core_wallet";
 import { buildDefaultBitcoinCoreWallet } from "./wallet.setting"
-import { buildDepositScript } from "../src/bridgeV1/utils/script";
-import { depositTransaction } from "../src/bridgeV1";
+import { buildDepositScript } from "../src/covenantV1/utils/bridge.script";
+import { depositTransaction } from "../src/covenantV1";
+import { signPsbtFromBase64 } from "./signpsbt";
 
 const bip32 = BIP32Factory(ecc);
 // import * as assert from 'assert';
@@ -172,7 +173,7 @@ class DepositProtocol {
             ]);
 
         let privateKey = await this.wallet.dumpPrivKey();
-        let txHex = await this.wallet.signPsbtFromBase64(psbt.toBase64(), [privateKey], true);
+        let txHex = await signPsbtFromBase64(psbt.toBase64(), [privateKey], true);
 
         let receipt = await this.wallet.pushTx(txHex)
         console.log(`txid: ${receipt}`)
