@@ -1,12 +1,12 @@
 /// <reference types="node" />
 import { Psbt, Transaction, networks } from "bitcoinjs-lib";
 import { initBTCCurve } from "./utils/curve";
-import { BridgeV1ScriptData } from "./utils/bridgeV1Script";
+import { buildDepositScript } from "./utils/script";
 import { UTXO } from "./types/UTXO";
-export { initBTCCurve, BridgeV1ScriptData };
+export { initBTCCurve, buildDepositScript };
 export declare function depositTransaction(scripts: {
     depositScript: Buffer;
-}, amount: number, changeAddress: string, inputUTXOs: UTXO[], network: networks.Network, feeRate: number, publicKeyNoCoord?: Buffer, lockHeight?: number): {
+}, amount: number, changeAddress: string, inputUTXOs: UTXO[], network: networks.Network, feeRate: number): {
     psbt: Psbt;
     fee: number;
 };
