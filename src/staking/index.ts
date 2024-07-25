@@ -403,8 +403,8 @@ function withdrawalTransaction(
  * - outputIndex: The index of the output to be spent in the original transaction (default is 0).
  *
  * @param {Object} scripts - The scripts used in the transaction.
- * @param {Transaction} transaction - The original staking transaction.
- * @param {string} slashingAddress - The address to send the slashed funds to.
+ * @param {Transaction} stakingTransaction - The original staking transaction. * @param {string} slashingAddress - The address to send the slashed funds to.
+ * @param {string} slashingAddress: The address to send the slashed funds to.
  * @param {number} slashingRate - The rate at which the funds are slashed.
  * @param {number} minimumFee - The minimum fee for the transaction in satoshis.
  * @param {networks.Network} network - The Bitcoin network.
@@ -471,8 +471,8 @@ export function slashTimelockUnbondedTransaction(
  * - psbt: The partially signed transaction (PSBT).
  *
  * @param {Object} scripts - The scripts used in the transaction. e.g slashingScript, unbondingTimelockScript
- * @param {Transaction} transaction - The original staking transaction.
- * @param {string} slashingAddress - The address to send the slashed funds to.
+ * @param {Transaction} stakingTransaction - The original staking transaction. * @param {string} slashingAddress - The address to send the slashed funds to.
+ * @param {number} slashingAddress - The address that will be slashed.
  * @param {number} slashingRate - The rate at which the funds are slashed.
  * @param {number} minimumFee - The minimum fee for the transaction in satoshis.
  * @param {networks.Network} network - The Bitcoin network.
@@ -536,6 +536,7 @@ export function slashEarlyUnbondedTransaction(
  * - outputIndex: The index of the output to be spent in the original transaction (default is 0).
  *
  * @param {Object} scripts - The scripts used in the transaction. e.g slashingScript, unbondingTimelockScript
+ * @param {Taptree} scriptTree - The taproot script tree.
  * @param {Transaction} transaction - The original staking transaction.
  * @param {string} slashingAddress - The address to send the slashed funds to.
  * @param {number} slashingRate - The rate at which the funds are slashed.

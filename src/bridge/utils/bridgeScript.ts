@@ -113,9 +113,9 @@ export class BridgeScriptData {
    * buildSingleKeyScript creates a single key script
    *    <pk> OP_CHECKSIGVERIFY (if withVerify is true)
    *    <pk> OP_CHECKSIG (if withVerify is false)
-   * @param pk - The public key buffer.
-   * @param withVerify - A boolean indicating whether to include the OP_CHECKSIGVERIFY opcode.
-   * @return The compiled script buffer.
+   * @param {Buffer} pk - The public key buffer.
+   * @param {boolean} withVerify - A boolean indicating whether to include the OP_CHECKSIGVERIFY opcode.
+   * @return {Buffer} The compiled script buffer.
    */
   #buildSingleKeyScript(pk: Buffer, withVerify: boolean): Buffer {
     // Check public key length
@@ -134,10 +134,10 @@ export class BridgeScriptData {
    *    <withVerify -> OP_NUMEQUALVERIFY>
    * It validates whether provided keys are unique and the threshold is not greater than number of keys
    * If there is only one key provided it will return single key sig script
-   * @param pks - An array of public keys.
-   * @param threshold - The required number of valid signers.
-   * @param withVerify - A boolean indicating whether to include the OP_VERIFY opcode.
-   * @return The compiled multi-key script as a Buffer.
+   * @param {Array<string>} pks - An array of public keys.
+   * @param {number} threshold - The required number of valid signers.
+   * @param {boolean} withVerify - A boolean indicating whether to include the OP_VERIFY opcode.
+   * @return {Buffer} The compiled multi-key script as a Buffer.
    * @throws {Error} If no keys are provided, if the required number of valid signers is greater than the number of provided keys, or if duplicate keys are provided.
    */
   #buildMultiKeyScript(

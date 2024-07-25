@@ -16,10 +16,10 @@ export declare const ESTIMATED_OP_RETURN_SIZE = 40;
  * - Adds 40 bytes for an OP_RETURN output.
  * - Adds the number of inputs to account for additional overhead.
  *
- * @param feeRate - The fee rate in satoshis per byte.
- * @param numInputs - The number of inputs in the transaction.
- * @param numOutputs - The number of outputs in the transaction.
- * @returns The estimated transaction fee in satoshis.
+ * @param {number} feeRate - The fee rate in satoshis per byte.
+ * @param {number} numInputs - The number of inputs in the transaction.
+ * @param {number} numOutputs - The number of outputs in the transaction.
+ * @return {number} The estimated transaction fee in satoshis.
  */
 export declare const getEstimatedFee: (feeRate: number, numInputs: number, numOutputs: number) => number;
 export declare const inputValueSum: (inputUTXOs: UTXO[]) => number;
@@ -43,7 +43,7 @@ export declare const inputValueSum: (inputUTXOs: UTXO[]) => number;
  * @param {number} stakingAmount - The amount to stake.
  * @param {number} feeRate - The fee rate in satoshis per byte.
  * @param {number} numOfOutputs - The number of outputs in the transaction.
- * @returns {PsbtTransactionResult} An object containing the selected UTXOs and the fee.
+ * @return {PsbtTransactionResult} An object containing the selected UTXOs and the fee.
  * @throws Will throw an error if there are insufficient funds or if the fee cannot be calculated.
  */
 export declare const getStakingTxInputUTXOsAndFees: (availableUTXOs: UTXO[], stakingAmount: number, feeRate: number, numOfOutputs: number) => {

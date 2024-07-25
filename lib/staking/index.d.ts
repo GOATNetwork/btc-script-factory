@@ -38,7 +38,7 @@ export { type UTXO, type StakingScripts };
  * @param {number} feeRate - The fee rate in satoshis per byte.
  * @param {Buffer} [publicKeyNoCoord] - The public key if the wallet is in taproot mode.
  * @param {number} [lockHeight] - The optional block height locktime.
- * @returns {PsbtTransactionResult} The partially signed transaction and the fee.
+ * @return {PsbtTransactionResult} The partially signed transaction and the fee.
  * @throws Will throw an error if the amount or fee rate is less than or equal
  * to 0, if the change address is invalid, or if the public key is invalid.
  */
@@ -72,7 +72,7 @@ export declare function stakingTransaction(scripts: {
  * @param {networks.Network} network - The Bitcoin network.
  * @param {number} feeRate - The fee rate for the transaction in satoshis per byte.
  * @param {number} [outputIndex=0] - The index of the output to be spent in the original transaction.
- * @returns {PsbtTransactionResult} An object containing the partially signed transaction (PSBT).
+ * @return {PsbtTransactionResult} An object containing the partially signed transaction (PSBT).
  */
 export declare function withdrawEarlyUnbondedTransaction(scripts: {
     unbondingTimelockScript: Buffer;
@@ -103,7 +103,7 @@ export declare function withdrawEarlyUnbondedTransaction(scripts: {
  * @param {networks.Network} network - The Bitcoin network.
  * @param {number} feeRate - The fee rate for the transaction in satoshis per byte.
  * @param {number} [outputIndex=0] - The index of the output to be spent in the original transaction.
- * @returns {PsbtTransactionResult} An object containing the partially signed transaction (PSBT).
+ * @return {PsbtTransactionResult} An object containing the partially signed transaction (PSBT).
  */
 export declare function withdrawTimelockUnbondedTransaction(scripts: {
     timelockScript: Buffer;
@@ -134,13 +134,13 @@ export declare function withdrawTimelockUnbondedTransaction(scripts: {
  * - outputIndex: The index of the output to be spent in the original transaction (default is 0).
  *
  * @param {Object} scripts - The scripts used in the transaction.
- * @param {Transaction} transaction - The original staking transaction.
- * @param {string} slashingAddress - The address to send the slashed funds to.
+ * @param {Transaction} stakingTransaction - The original staking transaction. * @param {string} slashingAddress - The address to send the slashed funds to.
+ * @param {string} slashingAddress: The address to send the slashed funds to.
  * @param {number} slashingRate - The rate at which the funds are slashed.
  * @param {number} minimumFee - The minimum fee for the transaction in satoshis.
  * @param {networks.Network} network - The Bitcoin network.
  * @param {number} [outputIndex=0] - The index of the output to be spent in the original transaction.
- * @returns {{ psbt: Psbt }} An object containing the partially signed transaction (PSBT).
+ * @return {{ psbt: Psbt }} An object containing the partially signed transaction (PSBT).
  */
 export declare function slashTimelockUnbondedTransaction(scripts: {
     slashingScript: Buffer;
@@ -175,13 +175,13 @@ export declare function slashTimelockUnbondedTransaction(scripts: {
  * - psbt: The partially signed transaction (PSBT).
  *
  * @param {Object} scripts - The scripts used in the transaction. e.g slashingScript, unbondingTimelockScript
- * @param {Transaction} transaction - The original staking transaction.
- * @param {string} slashingAddress - The address to send the slashed funds to.
+ * @param {Transaction} stakingTransaction - The original staking transaction. * @param {string} slashingAddress - The address to send the slashed funds to.
+ * @param {number} slashingAddress - The address that will be slashed.
  * @param {number} slashingRate - The rate at which the funds are slashed.
  * @param {number} minimumFee - The minimum fee for the transaction in satoshis.
  * @param {networks.Network} network - The Bitcoin network.
  * @param {number} [outputIndex=0] - The index of the output to be spent in the original transaction.
- * @returns {{ psbt: Psbt }} An object containing the partially signed transaction (PSBT).
+ * @return {{ psbt: Psbt }} An object containing the partially signed transaction (PSBT).
  */
 export declare function slashEarlyUnbondedTransaction(scripts: {
     slashingScript: Buffer;
@@ -218,7 +218,7 @@ export declare const createWitness: (originalWitness: Buffer[], paramsCovenants:
  * @param {UTXO[]} inputUTXOs - Array of UTXOs to be used as inputs.
  * @param {Buffer} [publicKeyNoCoord] - Optional public key without coordinates.
  * @param {number} [lockHeight] - Optional lock height for the transaction.
- * @returns {PsbtTransactionResult} - The result containing the PSBT transaction and additional data.
+ * @return {PsbtTransactionResult} - The result containing the PSBT transaction and additional data.
  */
 export declare function continueTimelockStakingTransaction(scripts: {
     timelockScript: Buffer;

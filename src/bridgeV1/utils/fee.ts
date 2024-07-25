@@ -45,32 +45,9 @@ export const inputValueSum = (inputUTXOs: UTXO[]): number => {
     return inputUTXOs.reduce((acc, utxo) => acc + utxo.value, 0);
 }
 
-/**
- * Selects UTXOs and calculates the fee for a staking transaction.
- *
- * This method selects the highest value UTXOs from all available UTXOs to
- * cover the staking amount and the transaction fees.
- *
- * Inputs:
- * - availableUTXOs: All available UTXOs from the wallet.
- * - stakingAmount: Amount to stake.
- * - feeRate: Fee rate for the transaction in satoshis per byte.
- * - numOfOutputs: Number of outputs in the transaction.
- *
- * Returns:
- * - selectedUTXOs: The UTXOs selected to cover the staking amount and fees.
- * - fee: The total fee amount for the transaction.
- *
- * @param {UTXO[]} availableUTXOs - All available UTXOs from the wallet.
- * @param {number} stakingAmount - The amount to stake.
- * @param {number} feeRate - The fee rate in satoshis per byte.
- * @param {number} numOfOutputs - The number of outputs in the transaction.
- * @return {PsbtTransactionResult} An object containing the selected UTXOs and the fee.
- * @throws Will throw an error if there are insufficient funds or if the fee cannot be calculated.
- */
-export const getStakingTxInputUTXOsAndFees = (
+export const getDepositTxInputUTXOsAndFees = (
     availableUTXOs: UTXO[],
-    stakingAmount: number,
+    depositAmount: number,
     feeRate: number,
     numOfOutputs: number
 ): {
@@ -91,8 +68,8 @@ export const getStakingTxInputUTXOsAndFees = (
         selectedUTXOs.push(utxo);
         accumulatedValue += utxo.value;
         estimatedFee = getEstimatedFee(feeRate, selectedUTXOs.length, numOfOutputs);
-        console.log(`estimatedFee ${estimatedFee}, feeRate ${feeRate}, accumulatedValue ${accumulatedValue}, ${numOfOutputs}`);
-        if (accumulatedValue >= stakingAmount + estimatedFee) {
+        // console.log(`estimatedFee ${estimatedFee}, feeRate ${feeRate}, accumulatedValue ${accumulatedValue}, ${numOfOutputs}`);
+        if (accumulatedValue >= depositAmount + estimatedFee) {
             break;
         }
     }
@@ -100,8 +77,8 @@ export const getStakingTxInputUTXOsAndFees = (
         throw new Error("Unable to calculate fee.");
     }
 
-    if (accumulatedValue < stakingAmount + estimatedFee) {
-        throw new Error("Insufficient funds: unable to gather enough UTXOs to cover the staking amount and fees.");
+    if (accumulatedValue < depositAmount + estimatedFee) {
+        throw new Error("Insufficient funds: unable to gather enough UTXOs to cover the deposit amount and fees.");
     }
 
     return {
