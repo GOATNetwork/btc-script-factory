@@ -6,6 +6,7 @@ import * as bridge from "../src/bridge";
 import * as bridgeScript from "../src/bridge/utils/bridgeScript";
 import {BitcoinCoreWallet} from "walletprovider-ts/lib/providers/bitcoin_core_wallet";
 import {buildDefaultBitcoinCoreWallet} from './wallet.setting'
+import { signPsbtFromBase64 } from "./signpsbt";
 
 const bip32 = BIP32Factory(ecc);
 //import * as assert from 'assert';
@@ -150,7 +151,7 @@ class DepositProtocol {
         console.log("signPsbt");
 
         let keyPairs = [await this.wallet.dumpPrivKey()];
-        const signedDepositPsbtHex = await this.wallet.signPsbtFromBase64(unsignedRecapturePsbt.psbt.toBase64(), keyPairs, true);
+        const signedDepositPsbtHex = await signPsbtFromBase64(unsignedRecapturePsbt.psbt.toBase64(), keyPairs, true);
 
         console.log("pushTx", signedDepositPsbtHex);
         this.check_balance();
@@ -182,7 +183,7 @@ class DepositProtocol {
             this.covenants[2],
         ];
         console.log("signPsbt");
-        const signedSendPsbtHex = await this.wallet.signPsbtFromBase64(sendPsbt.psbt.toBase64(), keyPairs, true);
+        const signedSendPsbtHex = await signPsbtFromBase64(sendPsbt.psbt.toBase64(), keyPairs, true);
 
         const tx = Transaction.fromHex(signedSendPsbtHex);
         const virtualSize = tx.virtualSize();
@@ -253,7 +254,7 @@ class DepositProtocol {
         this.covenants[2],
       ];
       console.log("signPsbt");
-      const signedTransactionHex = await this.wallet.signPsbtFromBase64(sendPsbt.psbt.toBase64(), keyPairs, true);
+      const signedTransactionHex = await signPsbtFromBase64(sendPsbt.psbt.toBase64(), keyPairs, true);
 
       const tx = Transaction.fromHex(signedTransactionHex);
       const virtualSize = tx.virtualSize();
@@ -397,7 +398,7 @@ class DepositProtocol {
             ]);
 
         let privateKey = await this.wallet.dumpPrivKey();
-        let txHex = await this.wallet.signPsbtFromBase64(psbt.toBase64(), [privateKey], true);
+        let txHex = await signPsbtFromBase64(psbt.toBase64(), [privateKey], true);
 
         let receipt = await this.wallet.pushTx(txHex)
         console.log(`txid: ${receipt}`)

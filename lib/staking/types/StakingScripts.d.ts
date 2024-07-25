@@ -1,4 +1,3 @@
-/// <reference types="node" />
 export interface StakingScripts {
     timelockScript: Buffer;
     unbondingScript: Buffer;
