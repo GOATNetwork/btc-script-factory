@@ -6,7 +6,7 @@
   "scripts": {
     "build": "tsc -p ./tsconfig.json",
     "lint_ts": "./node_modules/.bin/eslint --fix --ext .ts src",
-    "lint_fix": "eslint --fix src/**/*.ts scripts/**/*.ts",
+    "lint_fix": "./node_modules/.bin/eslint --fix --ext .ts scripts",
     "lint": "npm run lint_ts && npm run lint_fix",
     "unit": "npm run build && npm run nobuild:unit"
   },
