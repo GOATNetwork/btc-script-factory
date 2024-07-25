@@ -5,6 +5,7 @@ import * as staking from "../src/staking";
 import * as stakingScript from "../src/staking/utils/stakingScript";
 import { BitcoinCoreWallet } from "walletprovider-ts/lib/providers/bitcoin_core_wallet";
 import { buildDefaultBitcoinCoreWallet } from "./wallet.setting"
+
 import { signPsbtFromBase64 } from "./signpsbt";
 
 const bip32 = BIP32Factory(ecc);
@@ -103,6 +104,7 @@ class StakingProtocol {
         let { psbt } = staking.stakingTransaction(this.scripts, lockingAmount, changeAddress, inputUTXOs, network, feeRate, publicKeyNoCoord, lockHeight);
 
         console.log("psbt base64:", psbt.toBase64())
+
         await this.wallet.walletPassphrase("btcstaker", 1000);
         const signedStakingPsbtHex = await this.wallet.signPsbt(psbt.toHex());
         console.log("walltet signPsbt", signedStakingPsbtHex);
