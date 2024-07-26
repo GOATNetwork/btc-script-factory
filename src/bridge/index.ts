@@ -460,7 +460,7 @@ export function depositP2PKHTransaction(
     psbt.addInput({
       hash: input.txid,
       index: input.vout,
-      nonWitnessUtxo: Buffer.from(input.rawTransaction, "hex"),
+      nonWitnessUtxo: Buffer.from(input.rawTransaction!, "hex"),
       sequence: 0xfffffffd // Enable locktime by setting the sequence value to (RBF-able)
     });
   }

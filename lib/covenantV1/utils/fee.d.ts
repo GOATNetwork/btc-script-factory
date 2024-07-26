@@ -2,7 +2,6 @@ import { UTXO } from "../types/UTXO";
 export declare const INPUT_SIZE_FOR_FEE_CAL = 180;
 export declare const OUTPUT_SIZE_FOR_FEE_CAL = 34;
 export declare const TX_BUFFER_SIZE_FOR_FEE_CAL = 10;
-export declare const ESTIMATED_OP_RETURN_SIZE = 40;
 /**
  * Calculates the estimated transaction fee using a heuristic formula.
  *
