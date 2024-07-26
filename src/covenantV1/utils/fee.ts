@@ -9,8 +9,6 @@ export const OUTPUT_SIZE_FOR_FEE_CAL = 34;
 // Buffer size for a transaction in bytes for fee calculation purpose only
 export const TX_BUFFER_SIZE_FOR_FEE_CAL = 10;
 
-// Estimated size of an OP_RETURN output in bytes for fee calculation purpose only
-export const ESTIMATED_OP_RETURN_SIZE = 40;
 
 /**
  * Calculates the estimated transaction fee using a heuristic formula.
@@ -36,7 +34,7 @@ export const getEstimatedFee = (
     return (
         numInputs * INPUT_SIZE_FOR_FEE_CAL +
         numOutputs * OUTPUT_SIZE_FOR_FEE_CAL +
-        TX_BUFFER_SIZE_FOR_FEE_CAL + numInputs + ESTIMATED_OP_RETURN_SIZE
+        TX_BUFFER_SIZE_FOR_FEE_CAL + numInputs
     ) * feeRate;
 }
 
@@ -76,8 +74,8 @@ export const getDepositTxInputUTXOsAndFees = (
     if (!estimatedFee) {
         throw new Error("Unable to calculate fee.");
     }
+    console.log(`selectedUTXOs ${selectedUTXOs.length}, accumulatedValue ${accumulatedValue}, depositAmount, ${depositAmount}, estimatedFee ${estimatedFee}`)
 
-    console.log(`selectedUTXOs ${selectedUTXOs.length}, accumulatedValue ${accumulatedValue}, estimatedFee ${estimatedFee}`)
     if (accumulatedValue < depositAmount + estimatedFee) {
         throw new Error("Insufficient funds: unable to gather enough UTXOs to cover the deposit amount and fees.");
     }
