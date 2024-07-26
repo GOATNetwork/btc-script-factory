@@ -12,6 +12,40 @@ const regtestWalletUtils = new WalletUtils(networks.regtest);
 
 const network = networks.regtest;
 
+// Define this function outside the describe block to be reusable
+const validateCommonFields = (
+  psbtResult: PsbtTransactionResult,
+  amount: number,
+  estimatedFee: number,
+  changeAddress: string
+) => {
+  expect(psbtResult).toBeDefined();
+  const { psbt, fee } = psbtResult;
+
+  // Validate transaction fees
+  expect(fee).toBeCloseTo(estimatedFee, 2); // Allowing a small margin for error
+
+  // Validate UTXO and output balances
+  const inputAmount = psbt.data.inputs.reduce(
+    (sum, input) => sum + input.witnessUtxo!.value,
+    0
+  );
+  const outputAmount = psbt.txOutputs.reduce(
+    (sum, output) => sum + output.value,
+    0
+  );
+  expect(inputAmount).toBeGreaterThanOrEqual(outputAmount + fee);
+
+  // Validate change amount and address correctness
+  if (inputAmount > (amount + fee)) {
+    const expectedChange = inputAmount - (amount + fee);
+    const changeOutput = psbt.txOutputs.find((output) => output.address === changeAddress);
+    expect(changeOutput).toBeDefined();
+    expect(changeOutput!.value).toBeCloseTo(expectedChange, 2);
+  }
+};
+
+
 describe("depositTransaction", () => {
   const posKey = "d6ce14162f3954bac0fff55a12b6df7d614801f358b5d910fe7986a47102e657";
   const ownerEvmAddress = "0x2915fd8beebdc822887deceac3dfe1540fac9c81";
@@ -47,6 +81,7 @@ describe("depositTransaction", () => {
     const inputUTXOs = await regtestWalletUtils.getUtxos(amount - 1e7); // Not enough to cover the transaction + fee
 
     expect(() => depositTransaction(
+
       { depositScript },
       amount,
       changeAddress,
@@ -108,35 +143,3 @@ describe("depositTransaction", () => {
   });
 });
 
-// Define this function outside the describe block to be reusable
-const validateCommonFields = (
-  psbtResult: PsbtTransactionResult,
-  amount: number,
-  estimatedFee: number,
-  changeAddress: string
-) => {
-  expect(psbtResult).toBeDefined();
-  const { psbt, fee } = psbtResult;
-
-  // Validate transaction fees
-  expect(fee).toBeCloseTo(estimatedFee, 2); // Allowing a small margin for error
-
-  // Validate UTXO and output balances
-  const inputAmount = psbt.data.inputs.reduce(
-    (sum, input) => sum + input.witnessUtxo!.value,
-    0
-  );
-  const outputAmount = psbt.txOutputs.reduce(
-    (sum, output) => sum + output.value,
-    0
-  );
-  expect(inputAmount).toBeGreaterThanOrEqual(outputAmount + fee);
-
-  // Validate change amount and address correctness
-  if (inputAmount > (amount + fee)) {
-    const expectedChange = inputAmount - (amount + fee);
-    const changeOutput = psbt.txOutputs.find((output) => output.address === changeAddress);
-    expect(changeOutput).toBeDefined();
-    expect(changeOutput!.value).toBeCloseTo(expectedChange, 2);
-  }
-};
