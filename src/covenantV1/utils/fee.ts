@@ -74,7 +74,7 @@ export const getDepositTxInputUTXOsAndFees = (
     if (!estimatedFee) {
         throw new Error("Unable to calculate fee.");
     }
-    console.log(`selectedUTXOs ${selectedUTXOs.length}, accumulatedValue ${accumulatedValue}, depositAmount, ${depositAmount}, estimatedFee ${estimatedFee}`)
+    console.log(`selectedUTXOs ${selectedUTXOs.length}, accumulatedValue ${accumulatedValue}, depositAmount ${depositAmount}, estimatedFee ${estimatedFee}`)
 
     if (accumulatedValue < depositAmount + estimatedFee) {
         throw new Error("Insufficient funds: unable to gather enough UTXOs to cover the deposit amount and fees.");
