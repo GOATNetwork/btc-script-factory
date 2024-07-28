@@ -48,7 +48,7 @@ export function buildStakingScript(
       opcodes.OP_CHECKSEQUENCEVERIFY,
       opcodes.OP_DROP,
       delegatorKey,
-      opcodes.OP_CHECKSIG,
+      opcodes.OP_CHECKSIGVERIFY,
     opcodes.OP_ELSE,
       combineBytes,
       opcodes.OP_EQUALVERIFY,

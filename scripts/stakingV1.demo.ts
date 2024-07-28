@@ -1,13 +1,14 @@
 import BIP32Factory, { BIP32Interface } from "bip32";
 import * as ecc from "tiny-secp256k1";
-import { initEccLib, networks, Psbt, Transaction } from "bitcoinjs-lib";
-import * as staking from "../src/staking";
+import { initEccLib, networks, Psbt, script, Transaction } from "bitcoinjs-lib";
 import { BitcoinCoreWallet } from "walletprovider-ts/lib/providers/bitcoin_core_wallet";
 import { buildDefaultBitcoinCoreWallet } from "./wallet.setting"
 
 import { signPsbtFromBase64 } from "./signpsbt";
 import { buildStakingScript } from "../src/covenantV1/utils/staking.script";
-import { stakingTransaction, withdrawalTimeLockTransaction, withdrawalUnbondingTransaction } from "../src/covenantV1/staking";
+import { stakingTransaction, withdrawalTimeLockTransaction, withdrawalTimeLockTransactionByTx, withdrawalUnbondingTransaction, withdrawalUnbondingTransactionByTx } from "../src/covenantV1/staking";
+import { UTXO } from "../lib/covenantV1/types/UTXO";
+import { ECPairInterface } from "ecpair";
 
 const bip32 = BIP32Factory(ecc);
 // import * as assert from 'assert';
@@ -18,7 +19,7 @@ const bip39 = require("bip39")
 
 initEccLib(ecc);
 
-const STAKING_TIMELOCK = 20;
+const STAKING_TIMELOCK = 60;
 
 const invalidEthAddress = "0x0000000000000000000000000000000000000000";
 
@@ -81,6 +82,8 @@ class StakingProtocol {
   }
 
   async getStakerPk() {
+    await this.wallet.walletPassphrase("btcstaker", 1000);
+
     let stakerAddress = await this.wallet.getAddress();
     let pubKey = await this.wallet.getPublicKey(stakerAddress);
     let stakerPk = Buffer.from(pubKey, "hex").subarray(0, 33);
@@ -91,12 +94,13 @@ class StakingProtocol {
     console.log("staking");
     const lockHeight = await this.wallet.getBTCTipHeight() + 10;
     const stakerPk = await this.getStakerPk();
+    const keyPair = await this.wallet.dumpPrivKey();
 
     const stakingScript = buildStakingScript(
       this.ownerEvmAddress.startsWith("0x") ?
         Buffer.from(this.ownerEvmAddress.slice(2), "hex") :
         Buffer.from(this.ownerEvmAddress, "hex"),
-      stakerPk,
+      keyPair.publicKey,
       this.validatorKey,
       lockHeight,
       this.validatorIndex,
@@ -109,7 +113,7 @@ class StakingProtocol {
     const feeRate = 15;
     const changeAddress = await this.wallet.getAddress();
     const inputUTXOs = await this.wallet.getUtxos(changeAddress, amount);
-
+    console.log(inputUTXOs.find((utxo: UTXO) => utxo.txid === "106e9410902ea87ca94179a852346371d0cab3a711aa0931b09e2659055337a6"))
     const { psbt } = stakingTransaction(
       this.scripts,
       amount,
@@ -119,8 +123,6 @@ class StakingProtocol {
       feeRate,
       lockHeight
     )
-
-    await this.wallet.walletPassphrase("btcstaker", 1000);
 
     const signedStakingPsbtHex = await this.wallet.signPsbt(psbt.toHex());
 
@@ -216,42 +218,97 @@ class StakingProtocol {
     console.log(`txid: ${receipt}`)
   }
 
-  async slash() {
+  async withdrawTimelockByTx() {
+    console.log("withdrawTimelock");
     await this.mine(20, await this.wallet.getAddress());
-    console.log("Slashing");
-    let { fastestFee } = await this.wallet.getNetworkFees();
-    let stakingOutputIndex = 0;
-    let slashingAddress = "bcrt1q7gjfeaydr8edeupkw3encq8pksnalvnda5yakt";
-    console.log(`fastestFee ${fastestFee}, slashing address ${slashingAddress}`)
-    let slashingRate = 0.5;
-    const slashTimelockUnbondedPsbt: { psbt: Psbt } = staking.slashTimelockUnbondedTransaction(
+
+    const withdrawalAddress = await this.wallet.getAddress();
+    const minimumFee = 1000;
+    const outputIndex = 0;
+
+    const { transaction } = withdrawalTimeLockTransactionByTx(
       this.scripts,
       this.stakingTx,
-      slashingAddress,
-      slashingRate,
-      fastestFee || 1000, // feeRate,
+      withdrawalAddress,
+      minimumFee,
       network,
-      stakingOutputIndex
+      outputIndex
     );
-    console.log("init account, staker", await this.wallet.getAddress());
 
-    let keyPairs = [
-      await this.wallet.dumpPrivKey(),
-      this.covenants[0],
-      this.covenants[1],
-      this.covenants[2]
-    ];
-    console.log("signPsbt");
-    const signedStakingPsbtHex = await signPsbtFromBase64(slashTimelockUnbondedPsbt.psbt.toBase64(), keyPairs, true);
+    async function signTransaction(transaction: Transaction, previousTx: Transaction, outputIndex: number, keyPair: ECPairInterface, signatureHashType = Transaction.SIGHASH_ALL) {
+      // const txHash = transaction.hashForSignature(0, previousTx.outs[outputIndex].script, signatureHashType);
+      // const signature = keyPair.sign(txHash);
 
-    console.log("pushTx", signedStakingPsbtHex);
-    this.check_balance();
-    let receipt = await this.wallet.pushTx(signedStakingPsbtHex);
-    console.log("txid: ", receipt);
-    await this.mine(20, await this.wallet.getAddress());
-    this.check_balance();
+      // https://github.com/bitcoinjs/bitcoinjs-lib/blob/8d9775c20da03ab40ccbb1971251e71d117bcd8b/ts_src/psbt.ts#L1650-L1656
+      const txHash = transaction.hashForWitnessV0(outputIndex, previousTx.outs[outputIndex].script, previousTx.outs[outputIndex].value, signatureHashType);
+      // https://github.com/bitcoinjs/bitcoinjs-lib/blob/8d9775c20da03ab40ccbb1971251e71d117bcd8b/ts_src/psbt.ts#L852
+      const signature = script.signature.encode(keyPair.sign(txHash), signatureHashType);
+      return signature;
+    }
+
+    const keyPair = await this.wallet.dumpPrivKey();
+    const signature: Buffer = await signTransaction(transaction, this.stakingTx, outputIndex, keyPair);
+
+    console.log(signature.toString("hex"));
+    transaction.setWitness(0, [
+      // Buffer.alloc(0),
+      signature,
+      keyPair.publicKey,
+      this.ownerEvmAddress.startsWith("0x") ?
+        Buffer.from(this.ownerEvmAddress.slice(2), "hex") :
+        Buffer.from(this.ownerEvmAddress, "hex"),
+    ]);
+
+    const txHex = transaction.toHex();
+
+    const receipt = await this.wallet.pushTx(txHex);
+    console.log(`txid: ${receipt}`)
   }
 
+  async withdrawEarlyByTx() {
+    console.log("withdrawEarly");
+    await this.mine(20, await this.wallet.getAddress());
+
+    const withdrawalAddress = await this.wallet.getAddress();
+    const transactionFee = 1000;
+    const outputIndex = 0;
+
+    const { transaction } = withdrawalUnbondingTransactionByTx(
+      this.scripts,
+      this.stakingTx,
+      withdrawalAddress,
+      transactionFee,
+      network,
+      outputIndex
+    );
+
+    function signTransaction(tx: Transaction, vin: number, keyPair: any, redeemScript: Buffer, value: number) {
+      const sighash = tx.hashForWitnessV0(vin, redeemScript, value, Transaction.SIGHASH_ALL);
+      const signature = keyPair.sign(sighash);
+      return signature.toScriptSignature(Transaction.SIGHASH_ALL);
+    }
+
+    const signature = signTransaction(transaction, outputIndex, await this.wallet.dumpPrivKey(), Buffer.from(this.scripts.stakingScript, "hex"), this.stakingTx.outs[outputIndex].value);
+
+    const validatorSignature = signTransaction(transaction, outputIndex, this.validator, Buffer.from(this.scripts.stakingScript, "hex"), this.stakingTx.outs[outputIndex].value);
+
+    transaction.setWitness(0, [
+      invalidEthAddress.startsWith("0x") ?
+        Buffer.from(invalidEthAddress.slice(2), "hex") :
+        Buffer.from(invalidEthAddress, "hex"),
+      Buffer.concat([
+        Buffer.alloc(4, this.validatorIndex), // Ensure 4 bytes for validatorIndex
+        Buffer.alloc(4, this.nonce) // Ensure 4 bytes for nonce
+      ]),
+      validatorSignature, // todo how to get validatorSignature
+      signature
+    ]);
+
+    const txHex = transaction.toHex();
+
+    const receipt = await this.wallet.pushTx(txHex);
+    console.log(`txid: ${receipt}`)
+  }
 
   async check_balance() {
     console.log("Wallet balance: ", await this.wallet.getBalance());
@@ -307,16 +364,16 @@ async function run() {
     await stakingProtocol.check_balance();
     await stakingProtocol.staking();
     await stakingProtocol.check_balance();
-    await stakingProtocol.withdrawTimelock();
+    await stakingProtocol.withdrawTimelockByTx();
   }
-
+return
   // withdraw timelock
   {
     await stakingProtocol.mine(STAKING_TIMELOCK, await stakingProtocol.wallet.getAddress());
     await stakingProtocol.check_balance();
     await stakingProtocol.staking();
     await stakingProtocol.check_balance();
-    await stakingProtocol.withdrawEarly();
+    await stakingProtocol.withdrawEarlyByTx();
   }
 }
 
