@@ -4,7 +4,7 @@ import { initEccLib, networks, Psbt, Transaction } from "bitcoinjs-lib";
 import { BitcoinCoreWallet } from "walletprovider-ts/lib/providers/bitcoin_core_wallet";
 import { buildDefaultBitcoinCoreWallet } from "./wallet.setting"
 import { buildDepositScript } from "../src/covenantV1/utils/bridge.script";
-import { depositTransaction } from "../src/covenantV1";
+import { depositTransaction } from "../src/covenantV1/bridge";
 import { signPsbtFromBase64 } from "./signpsbt";
 
 const bip32 = BIP32Factory(ecc);

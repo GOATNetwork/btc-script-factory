@@ -23,6 +23,7 @@ export function buildStakingScript(
     throw new Error("Invalid input types");
   }
   if (evmAddress.length !== ETH_PK_LENGTH || delegatorKey.length !== PK_LENGTH || validatorKey.length !== PK_LENGTH) {
+    console.log(evmAddress.length, delegatorKey.length, validatorKey.length)
     throw new Error("Invalid input lengths");
   }
   if (typeof transferTimeLock !== "number" || transferTimeLock < 0 || transferTimeLock > 65535 ||
@@ -42,20 +43,20 @@ export function buildStakingScript(
     evmAddress,
     opcodes.OP_EQUAL,
     opcodes.OP_IF,
-    opcodes.OP_DROP,
-    script.number.encode(transferTimeLock),
-    opcodes.OP_CHECKSEQUENCEVERIFY,
-    opcodes.OP_DROP,
-    delegatorKey,
-    opcodes.OP_CHECKSIG,
+      opcodes.OP_DROP,
+      script.number.encode(transferTimeLock),
+      opcodes.OP_CHECKSEQUENCEVERIFY,
+      opcodes.OP_DROP,
+      delegatorKey,
+      opcodes.OP_CHECKSIG,
     opcodes.OP_ELSE,
-    combineBytes,
-    opcodes.OP_EQUALVERIFY,
-    opcodes.OP_2,
-    validatorKey,
-    delegatorKey,
-    opcodes.OP_2,
-    opcodes.OP_CHECKMULTISIG,
+      combineBytes,
+      opcodes.OP_EQUALVERIFY,
+      opcodes.OP_2,
+      validatorKey,
+      delegatorKey,
+      opcodes.OP_2,
+      opcodes.OP_CHECKMULTISIG,
     opcodes.OP_ENDIF
   ]);
 }

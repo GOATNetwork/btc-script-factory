@@ -1,6 +1,6 @@
 // Import necessary libraries
 import { networks } from "bitcoinjs-lib";
-import { buildDepositScript, depositTransaction } from "../src/covenantV1";
+import { buildDepositScript, depositTransaction } from "../src/covenantV1/bridge";
 import WalletUtils from "./helper/walletUtils";
 import { PsbtTransactionResult } from "../lib/covenantV1/types/transaction";
 import { getDepositTxInputUTXOsAndFees } from "../src/covenantV1/utils/fee";

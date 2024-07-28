@@ -1,4 +1,4 @@
-import BIP32Factory from "bip32";
+import BIP32Factory, { BIP32Interface } from "bip32";
 import * as ecc from "tiny-secp256k1";
 import { initEccLib, networks, Psbt, Transaction } from "bitcoinjs-lib";
 import * as staking from "../src/staking";
@@ -42,7 +42,7 @@ async function deriveKey(mnemonic: string) {
 }
 
 const lockingAmount = 5e7; // Satoshi
-async function initAccount(numCovenants: number): Promise<any[]> {
+async function initAccount(numCovenants: number): Promise<BIP32Interface[]> {
     let accounts = new Array(numCovenants);
     // staker, covenants...covenants+numConv
     for (let i = 0; i < accounts.length; i++) {
