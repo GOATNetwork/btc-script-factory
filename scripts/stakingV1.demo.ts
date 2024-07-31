@@ -92,7 +92,8 @@ class StakingProtocol {
 
   async staking() {
     console.log("staking");
-    const lockHeight = await this.wallet.getBTCTipHeight() + 10;
+    const lockHeight = 10;
+    console.log("lockHeight: ", lockHeight);
     const stakerPk = await this.getStakerPk();
     const keyPair = await this.wallet.dumpPrivKey();
 
@@ -109,11 +110,11 @@ class StakingProtocol {
 
     this.scripts = { stakingScript };
 
-    const amount = 5e6; // 0.05 BTC
+    const amount = 1e6; // 0.01 BTC
     const feeRate = 15;
     const changeAddress = await this.wallet.getAddress();
     const inputUTXOs = await this.wallet.getUtxos(changeAddress, amount);
-    console.log(inputUTXOs.find((utxo: UTXO) => utxo.txid === "106e9410902ea87ca94179a852346371d0cab3a711aa0931b09e2659055337a6"))
+
     const { psbt } = stakingTransaction(
       this.scripts,
       amount,
@@ -221,6 +222,7 @@ class StakingProtocol {
   async withdrawTimelockByTx() {
     console.log("withdrawTimelock");
     await this.mine(20, await this.wallet.getAddress());
+    console.log("current height: ", await this.wallet.getBTCTipHeight());
 
     const withdrawalAddress = await this.wallet.getAddress();
     const minimumFee = 1000;
@@ -235,6 +237,7 @@ class StakingProtocol {
       outputIndex
     );
 
+    /*
     async function signTransaction(transaction: Transaction, previousTx: Transaction, outputIndex: number, keyPair: ECPairInterface, signatureHashType = Transaction.SIGHASH_ALL) {
       // const txHash = transaction.hashForSignature(0, previousTx.outs[outputIndex].script, signatureHashType);
       // const signature = keyPair.sign(txHash);
@@ -246,18 +249,32 @@ class StakingProtocol {
       return signature;
     }
 
-    const keyPair = await this.wallet.dumpPrivKey();
-    const signature: Buffer = await signTransaction(transaction, this.stakingTx, outputIndex, keyPair);
+    */
+    const delegatorKeyPair = await this.wallet.dumpPrivKey();
+    // const signature: Buffer = await signTransaction(transaction, this.stakingTx, outputIndex, keyPair);
 
-    console.log(signature.toString("hex"));
+    // console.log(signature.toString("hex"));
+
+    console.log("script compare: ", this.scripts.stakingScript, this.stakingTx.outs[outputIndex].script); // false todo find reason
+
+    console.log("stakingTx outs: ", this.stakingTx.outs);
+    const signatureHash = transaction.hashForWitnessV0(outputIndex, this.scripts.stakingScript, this.stakingTx.outs[outputIndex].value, Transaction.SIGHASH_ALL);
+    const signature = delegatorKeyPair.sign(signatureHash);
+    const signatureWithHashType = Buffer.concat([signature, Buffer.from([Transaction.SIGHASH_ALL])]);
+
     transaction.setWitness(0, [
-      // Buffer.alloc(0),
-      signature,
-      keyPair.publicKey,
-      this.ownerEvmAddress.startsWith("0x") ?
-        Buffer.from(this.ownerEvmAddress.slice(2), "hex") :
-        Buffer.from(this.ownerEvmAddress, "hex"),
+      signatureWithHashType,
+      delegatorKeyPair.publicKey,
+      Buffer.from(this.ownerEvmAddress.slice(2), "hex"),
+      this.scripts.stakingScript
     ]);
+
+    console.log("witness: ", [
+      signatureWithHashType.toString("hex"),
+      delegatorKeyPair.publicKey.toString("hex"),
+      Buffer.from(this.ownerEvmAddress.slice(2), "hex").toString("hex"),
+      this.scripts.stakingScript.toString("hex")
+    ])
 
     const txHex = transaction.toHex();
 
