@@ -3,7 +3,7 @@ jest.setTimeout(60000);
 import * as ecc from "tiny-secp256k1";
 import { initEccLib, networks, Psbt, Transaction } from "bitcoinjs-lib";
 import { buildDepositScript } from "../../src/covenantV1/utils/bridge.script";
-import { depositTransaction } from "../../src/covenantV1";
+import { depositTransaction } from "../../src/covenantV1/bridge";
 import { buildDefaultBitcoinCoreWallet } from "./wallet.setting";
 
 const network = networks.regtest;
@@ -11,7 +11,7 @@ const network = networks.regtest;
 initEccLib(ecc);
 
 describe.skip("depositTransaction", () => {
-  const posKey = "d6ce14162f3954bac0fff55a12b6df7d614801f358b5d910fe7986a47102e657";
+  const posKey = "d6ce14162f3954bac0fff55a12b6df7d614801f358b5d910fe7986a47102e65712";
   const ownerEvmAddress = "0x2915fd8beebdc822887deceac3dfe1540fac9c81";
 
   const evmAddressBuffer = ownerEvmAddress.startsWith("0x") ?

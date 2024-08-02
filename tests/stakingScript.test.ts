@@ -2,11 +2,11 @@ import { buildStakingScript } from "../src/covenantV1/utils/staking.script";
 import { script, opcodes } from "bitcoinjs-lib";
 
 describe("stakingScript", () => {
-  const delegatorKey = "9261bdf7033ba64b2e0a9941ace9923b168c6a182ce37aa35fd16c0076d6aa19";
+  const delegatorKey = "023d02b47df037a43cb4354c72f162da99f5bd558209ca851816ca9170fe291da7";
   const ownerEvmAddress = "0x2915fd8beebdc822887deceac3dfe1540fac9c81";
-  const validatorKey = "b012d9b1e987edc302d1e72ebc3c2910c1b4e9f8cd1f3b11f4686c41c7ef6db5";
-  const validatorNodeIndex = 0xef921bb0;
-  const nonce = 0x537d5579;
+  const validatorKey = "031944507b30d7a911d12532732e4877ed41b9f05fe2242df22e045436354a077b";
+  const validatorNodeIndex = Buffer.from("ef921bb0", "hex");
+  const nonce = Buffer.from("537d5579", "hex");
   const lockBlockNumber = 0x02;
 
   it("should build a valid staking script", () => {
@@ -27,8 +27,8 @@ describe("stakingScript", () => {
 
     // Expected script components
     const combineBytes = Buffer.concat([
-      Buffer.alloc(4, validatorNodeIndex),
-      Buffer.alloc(4, nonce)
+      validatorNodeIndex,
+      nonce
     ]);
 
     const expectedScript = script.compile([
@@ -71,7 +71,7 @@ describe("stakingScript", () => {
   });
 
   it("should throw an error for invalid public key length", () => {
-    const invalidDelegatorKeyBuffer = Buffer.from("9261bdf7033ba64b2e0a9941ace9923b168c6a182ce37aa35fd16c0076d6aa", "hex"); // One byte less
+    const invalidDelegatorKeyBuffer = Buffer.from("03fad0b79ac24e20a251a0fea9231c382ad5a19e07584d0a5b8f81807df20ccba2".slice(4), "hex"); // One byte less
 
     expect(() => buildStakingScript(
       Buffer.from(ownerEvmAddress.slice(2), "hex"),
@@ -112,9 +112,9 @@ describe("stakingScript", () => {
       Buffer.from(delegatorKey, "hex"),
       Buffer.from(validatorKey, "hex"),
       lockBlockNumber,
-      -1, // Invalid validatorIndex
+      Buffer.from("1", "hex"), // Invalid validatorIndex
       nonce
-    )).toThrow("Invalid numeric inputs");
+    )).toThrow("Invalid validatorIndex input");
 
     expect(() => buildStakingScript(
       Buffer.from(ownerEvmAddress.slice(2), "hex"),
@@ -122,7 +122,7 @@ describe("stakingScript", () => {
       Buffer.from(validatorKey, "hex"),
       lockBlockNumber,
       validatorNodeIndex,
-      -1 // Invalid nonce
-    )).toThrow("Invalid numeric inputs");
+      Buffer.from("1", "hex") // Invalid nonce
+    )).toThrow("Invalid nonce input");
   });
 });
