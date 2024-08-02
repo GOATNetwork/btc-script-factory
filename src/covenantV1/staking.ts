@@ -47,7 +47,6 @@ export function stakingTransaction(
 
   const { selectedUTXOs, fee } = getDepositTxInputUTXOsAndFees(inputUTXOs, amount, feeRate, 2);
 
-  console.log(selectedUTXOs)
   selectedUTXOs.forEach((input) => {
     psbt.addInput({
       hash: input.txid,
@@ -129,7 +128,7 @@ export function withdrawalTimeLockTransaction(
   const psbt = new Psbt({ network });
 
   psbt.addInput({
-    hash: stakingTransaction.getHash(),
+    hash: stakingTransaction.getId(),
     index: outputIndex,
     witnessUtxo: {
       value: stakingTransaction.outs[outputIndex].value,

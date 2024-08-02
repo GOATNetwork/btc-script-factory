@@ -1,6 +1,6 @@
 import BIP32Factory, { BIP32Interface } from "bip32";
 import * as ecc from "tiny-secp256k1";
-import { initEccLib, networks, Psbt, script, Transaction } from "bitcoinjs-lib";
+import { initEccLib, networks, Payment, payments, Psbt, script as bitcoinScript, Transaction } from "bitcoinjs-lib";
 import { BitcoinCoreWallet } from "walletprovider-ts/lib/providers/bitcoin_core_wallet";
 import { buildDefaultBitcoinCoreWallet } from "./wallet.setting"
 
@@ -9,6 +9,8 @@ import { buildStakingScript } from "../src/covenantV1/utils/staking.script";
 import { stakingTransaction, withdrawalTimeLockTransaction, withdrawalTimeLockTransactionByTx, withdrawalUnbondingTransaction, withdrawalUnbondingTransactionByTx } from "../src/covenantV1/staking";
 import { UTXO } from "../lib/covenantV1/types/UTXO";
 import { ECPairInterface } from "ecpair";
+import { PsbtInput } from "bip174/src/lib/interfaces";
+import { witnessStackToScriptWitness } from "bitcoinjs-lib/src/psbt/psbtutils";
 
 const bip32 = BIP32Factory(ecc);
 // import * as assert from 'assert';
@@ -113,7 +115,8 @@ class StakingProtocol {
     const amount = 1e6; // 0.01 BTC
     const feeRate = 15;
     const changeAddress = await this.wallet.getAddress();
-    const inputUTXOs = await this.wallet.getUtxos(changeAddress, amount);
+    const inputUTXOs = await this.wallet.getUtxos(changeAddress, amount + 5e7);
+    console.log("inputUTXOs: ", inputUTXOs.length)
 
     const { psbt } = stakingTransaction(
       this.scripts,
@@ -159,20 +162,37 @@ class StakingProtocol {
       outputIndex
     );
 
-    const txHex = await signPsbtFromBase64(psbt.toBase64(), [await this.wallet.dumpPrivKey()], true);
+    const stakerKeyPair = await this.wallet.dumpPrivKey();
 
-    // const signedPsbt = Psbt.fromBase64(signedPsbBase64);
+    psbt.signInput(0, stakerKeyPair);
 
-    // const tx = signedPsbt.extractTransaction();
-    const tx = Transaction.fromHex(txHex);
+    psbt.finalizeInput(0, (
+      inputIndex: number,
+      input: PsbtInput,
+      script: Buffer) => {
+        const payment = payments.p2wsh({
+          network,
+          redeem: {
+            network,
+            input: bitcoinScript.compile([
+              input.partialSig![inputIndex].signature,
+              input.partialSig![inputIndex].pubkey, // stakerKeyPair.publicKey
+              Buffer.from(this.ownerEvmAddress.slice(2), "hex")
+            ]),
+            output: script
+          }
+        })
 
-    tx.setWitness(0, [
-      this.ownerEvmAddress.startsWith("0x") ?
-        Buffer.from(this.ownerEvmAddress.slice(2), "hex") :
-        Buffer.from(this.ownerEvmAddress, "hex")
-    ]);
+        return {
+          finalScriptSig: Buffer.from(""),
+          finalScriptWitness: witnessStackToScriptWitness(payment.witness!)
+        }
+    })
 
-    // const txHex = tx.toHex();
+
+    const tx = psbt.extractTransaction();
+
+    const txHex = tx.toHex();
 
     const receipt = await this.wallet.pushTx(txHex);
     console.log(`txid: ${receipt}`)
@@ -381,7 +401,8 @@ async function run() {
     await stakingProtocol.check_balance();
     await stakingProtocol.staking();
     await stakingProtocol.check_balance();
-    await stakingProtocol.withdrawTimelockByTx();
+    await stakingProtocol.withdrawTimelock();
+    // await stakingProtocol.withdrawTimelockByTx();
   }
 return
   // withdraw timelock

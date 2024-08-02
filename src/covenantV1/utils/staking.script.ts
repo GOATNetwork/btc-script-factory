@@ -1,5 +1,6 @@
 import { script, opcodes } from "bitcoinjs-lib";
 import { ETH_PK_LENGTH, PK_LENGTH } from "../constants";
+const bip68 = require("bip68");
 
 /**
  * Script to validate transactions for a specific owner under certain conditions.
@@ -38,13 +39,15 @@ export function buildStakingScript(
     Buffer.alloc(4, nonce) // Ensure 4 bytes for nonce
   ]);
 
+  const sequence = bip68.encode({ blocks: transferTimeLock });
+
   return script.compile([
     opcodes.OP_DUP,
     evmAddress,
     opcodes.OP_EQUAL,
     opcodes.OP_IF,
       opcodes.OP_DROP,
-      script.number.encode(transferTimeLock),
+      script.number.encode(sequence),
       opcodes.OP_CHECKSEQUENCEVERIFY,
       opcodes.OP_DROP,
       delegatorKey,
