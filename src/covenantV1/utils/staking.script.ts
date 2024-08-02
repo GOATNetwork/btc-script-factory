@@ -1,4 +1,4 @@
-import { script, opcodes } from "bitcoinjs-lib";
+import { opcodes, script } from "bitcoinjs-lib";
 import { ETH_PK_LENGTH, PK_LENGTH } from "../constants";
 const bip68 = require("bip68");
 
@@ -49,9 +49,27 @@ export function buildStakingScript(
       opcodes.OP_DROP,
       script.number.encode(sequence),
       opcodes.OP_CHECKSEQUENCEVERIFY,
+      opcodes.OP_DROP, // Drop the sequence
+    opcodes.OP_ELSE,
+      opcodes.OP_DROP,
+      validatorKey,
+      opcodes.OP_CHECKSIGVERIFY,
+    opcodes.OP_ENDIF,
+    delegatorKey,
+    opcodes.OP_CHECKSIG
+  ])
+
+  return script.compile([
+    opcodes.OP_DUP,
+    evmAddress,
+    opcodes.OP_EQUAL,
+    opcodes.OP_IF,
+      opcodes.OP_DROP,
+      script.number.encode(sequence),
+      opcodes.OP_CHECKSEQUENCEVERIFY,
       opcodes.OP_DROP,
       delegatorKey,
-      opcodes.OP_CHECKSIGVERIFY,
+      opcodes.OP_CHECKSIG,
     opcodes.OP_ELSE,
       combineBytes,
       opcodes.OP_EQUALVERIFY,
@@ -60,6 +78,6 @@ export function buildStakingScript(
       delegatorKey,
       opcodes.OP_2,
       opcodes.OP_CHECKMULTISIG,
-    opcodes.OP_ENDIF
+    opcodes.OP_ENDIF,
   ]);
 }

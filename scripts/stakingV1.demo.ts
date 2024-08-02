@@ -1,6 +1,6 @@
 import BIP32Factory, { BIP32Interface } from "bip32";
 import * as ecc from "tiny-secp256k1";
-import { initEccLib, networks, Payment, payments, Psbt, script as bitcoinScript, Transaction } from "bitcoinjs-lib";
+import { initEccLib, networks, opcodes, Payment, payments, Psbt, script as bitcoinScript, Transaction } from "bitcoinjs-lib";
 import { BitcoinCoreWallet } from "walletprovider-ts/lib/providers/bitcoin_core_wallet";
 import { buildDefaultBitcoinCoreWallet } from "./wallet.setting"
 
@@ -94,7 +94,7 @@ class StakingProtocol {
 
   async staking() {
     console.log("staking");
-    const lockHeight = 10;
+    const lockHeight = 5;
     console.log("lockHeight: ", lockHeight);
     const stakerPk = await this.getStakerPk();
     const keyPair = await this.wallet.dumpPrivKey();
@@ -176,8 +176,7 @@ class StakingProtocol {
             network,
             input: bitcoinScript.compile([
               input.partialSig![inputIndex].signature,
-              input.partialSig![inputIndex].pubkey, // stakerKeyPair.publicKey
-              Buffer.from(this.ownerEvmAddress.slice(2), "hex")
+              Buffer.from(this.ownerEvmAddress.slice(2), "hex"),
             ]),
             output: script
           }
@@ -215,25 +214,38 @@ class StakingProtocol {
       outputIndex
     );
 
-    const txHex = await signPsbtFromBase64(psbt.toBase64(), [await this.wallet.dumpPrivKey(), this.validator], true);
+    const stakerKeyPair = await this.wallet.dumpPrivKey();
 
-    // const signedPsbt = Psbt.fromBase64(signedPsbBase64);
+    psbt.signInput(0, stakerKeyPair);
+    psbt.signInput(0, this.validator);
 
-    // const tx = signedPsbt.extractTransaction();
-    const tx = Transaction.fromHex(txHex);
+    psbt.finalizeInput(0, (
+      inputIndex: number,
+      input: PsbtInput,
+      script: Buffer) => {
+      const payment = payments.p2wsh({
+        network,
+        redeem: {
+          network,
+          input: bitcoinScript.compile([
+            input.partialSig![0].signature,
+            input.partialSig![1].signature,
+            Buffer.from(invalidEthAddress.slice(2), "hex")
+            // opcodes.FALSE
+          ]),
+          output: script
+        }
+      })
 
-    tx.setWitness(0, [
-      invalidEthAddress.startsWith("0x") ?
-        Buffer.from(invalidEthAddress.slice(2), "hex") :
-        Buffer.from(invalidEthAddress, "hex"),
-      Buffer.concat([
-        Buffer.alloc(4, this.validatorIndex), // Ensure 4 bytes for validatorIndex
-        Buffer.alloc(4, this.nonce) // Ensure 4 bytes for nonce
-      ])
-      // validatorSignature, // todo how to get validatorSignature
-    ]);
+      return {
+        finalScriptSig: Buffer.from(""),
+        finalScriptWitness: witnessStackToScriptWitness(payment.witness!)
+      }
+    })
 
-    // const txHex = tx.toHex();
+    const tx = psbt.extractTransaction();
+
+    const txHex = tx.toHex();
 
     const receipt = await this.wallet.pushTx(txHex);
     console.log(`txid: ${receipt}`)
@@ -402,16 +414,14 @@ async function run() {
     await stakingProtocol.staking();
     await stakingProtocol.check_balance();
     await stakingProtocol.withdrawTimelock();
-    // await stakingProtocol.withdrawTimelockByTx();
   }
-return
   // withdraw timelock
   {
     await stakingProtocol.mine(STAKING_TIMELOCK, await stakingProtocol.wallet.getAddress());
     await stakingProtocol.check_balance();
     await stakingProtocol.staking();
     await stakingProtocol.check_balance();
-    await stakingProtocol.withdrawEarlyByTx();
+    await stakingProtocol.withdrawEarly();
   }
 }
 

@@ -111,7 +111,7 @@ export function withdrawalTimeLockTransaction(
   }
 
   // position of time in the timelock script
-  const timePosition = 4;
+  const timePosition = 5;
   let timelock = 0;
 
   if (Buffer.isBuffer(decompiled[timePosition])) {
@@ -169,7 +169,7 @@ export function withdrawalUnbondingTransaction(
   const psbt = new Psbt({ network });
 
   psbt.addInput({
-    hash: stakingTransaction.getHash(),
+    hash: stakingTransaction.getId(),
     index: outputIndex,
     witnessUtxo: {
       value: stakingTransaction.outs[outputIndex].value,
