@@ -310,6 +310,9 @@ async function run() {
 
   await stakingProtocol.check_balance();
 
+  await stakingProtocol.wallet.walletPassphrase("btcstaker", 1000);
+
+
   // withdraw timelock
   {
     await stakingProtocol.mine(STAKING_TIMELOCK, await stakingProtocol.wallet.getAddress());
