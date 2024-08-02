@@ -18,13 +18,3 @@ export declare function withdrawalUnbondingTransaction(scripts: {
 }, stakingTransaction: Transaction, withdrawalAddress: string, transactionFee: number, network: networks.Network, outputIndex?: number): {
     psbt: Psbt;
 };
-export declare function withdrawalTimeLockTransactionByTx(scripts: {
-    stakingScript: Buffer;
-}, stakingTransaction: Transaction, withdrawalAddress: string, minimumFee: number, network: networks.Network, outputIndex?: number): {
-    transaction: Transaction;
-};
-export declare function withdrawalUnbondingTransactionByTx(scripts: {
-    stakingScript: Buffer;
-}, stakingTransaction: Transaction, withdrawalAddress: string, transactionFee: number, network: networks.Network, outputIndex?: number): {
-    transaction: Transaction;
-};

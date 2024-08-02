@@ -1,14 +1,11 @@
 import BIP32Factory, { BIP32Interface } from "bip32";
 import * as ecc from "tiny-secp256k1";
-import { initEccLib, networks, opcodes, Payment, payments, Psbt, script as bitcoinScript, Transaction } from "bitcoinjs-lib";
+import { initEccLib, networks, opcodes, payments, Psbt, script as bitcoinScript, Transaction } from "bitcoinjs-lib";
 import { BitcoinCoreWallet } from "walletprovider-ts/lib/providers/bitcoin_core_wallet";
 import { buildDefaultBitcoinCoreWallet } from "./wallet.setting"
 
-import { signPsbtFromBase64 } from "./signpsbt";
 import { buildStakingScript } from "../src/covenantV1/utils/staking.script";
-import { stakingTransaction, withdrawalTimeLockTransaction, withdrawalTimeLockTransactionByTx, withdrawalUnbondingTransaction, withdrawalUnbondingTransactionByTx } from "../src/covenantV1/staking";
-import { UTXO } from "../lib/covenantV1/types/UTXO";
-import { ECPairInterface } from "ecpair";
+import { stakingTransaction, withdrawalTimeLockTransaction, withdrawalUnbondingTransaction } from "../src/covenantV1/staking";
 import { PsbtInput } from "bip174/src/lib/interfaces";
 import { witnessStackToScriptWitness } from "bitcoinjs-lib/src/psbt/psbtutils";
 
@@ -22,8 +19,6 @@ const bip39 = require("bip39")
 initEccLib(ecc);
 
 const STAKING_TIMELOCK = 60;
-
-const invalidEthAddress = "0x0000000000000000000000000000000000000000";
 
 const mnemonicArray = [
   "worth pottery emotion apology alone coast evil tortoise calm normal cotton how",
@@ -65,8 +60,8 @@ class StakingProtocol {
   ownerEvmAddress: string;
   validatorKey: Buffer;
   validator: BIP32Interface;
-  validatorIndex: number;
-  nonce: number;
+  validatorIndex: Buffer;
+  nonce: Buffer;
 
   constructor(covenants: any[]) {
     this.covenants = covenants;
@@ -79,8 +74,8 @@ class StakingProtocol {
     this.validator = covenants[0]; // BIP32Interface
     this.validatorKey = this.validator.publicKey;
     // this.validatorKey = "b012d9b1e987edc302d1e72ebc3c2910c1b4e9f8cd1f3b11f4686c41c7ef6db5";
-    this.validatorIndex = 0xef921bb0;
-    this.nonce = 0x537d5579;
+    this.validatorIndex = Buffer.from("ef921bb0", "hex");
+    this.nonce = Buffer.from("537d5579", "hex");
   }
 
   async getStakerPk() {
@@ -96,7 +91,7 @@ class StakingProtocol {
     console.log("staking");
     const lockHeight = 5;
     console.log("lockHeight: ", lockHeight);
-    const stakerPk = await this.getStakerPk();
+    // const stakerPk = await this.getStakerPk();
     const keyPair = await this.wallet.dumpPrivKey();
 
     const stakingScript = buildStakingScript(
@@ -176,7 +171,8 @@ class StakingProtocol {
             network,
             input: bitcoinScript.compile([
               input.partialSig![inputIndex].signature,
-              Buffer.from(this.ownerEvmAddress.slice(2), "hex"),
+              Buffer.from(this.ownerEvmAddress.slice(2), "hex")
+              // opcodes.OP_TRUE
             ]),
             output: script
           }
@@ -214,23 +210,38 @@ class StakingProtocol {
       outputIndex
     );
 
+    const combineBytes = Buffer.concat([
+      this.validatorIndex,
+      this.nonce
+    ])
+
     const stakerKeyPair = await this.wallet.dumpPrivKey();
 
     psbt.signInput(0, stakerKeyPair);
     psbt.signInput(0, this.validator);
 
+
     psbt.finalizeInput(0, (
       inputIndex: number,
       input: PsbtInput,
       script: Buffer) => {
+      console.log("Partial Signatures:");
+      console.log(`\tStaker: ${input.partialSig![0].signature.toString("hex")}`);
+      console.log(`\tValidator: ${input.partialSig![1].signature.toString("hex")}`);
+
+      console.log("Public Keys:");
+      console.log(`\tStaker: ${input.partialSig![0].pubkey.toString("hex")}`);
+      console.log(`\tValidator: ${input.partialSig![1].pubkey.toString("hex")}`);
+
       const payment = payments.p2wsh({
         network,
         redeem: {
           network,
           input: bitcoinScript.compile([
-            input.partialSig![0].signature,
+            opcodes.OP_0,
             input.partialSig![1].signature,
-            Buffer.from(invalidEthAddress.slice(2), "hex")
+            input.partialSig![0].signature,
+            combineBytes
             // opcodes.FALSE
           ]),
           output: script
@@ -246,114 +257,6 @@ class StakingProtocol {
     const tx = psbt.extractTransaction();
 
     const txHex = tx.toHex();
-
-    const receipt = await this.wallet.pushTx(txHex);
-    console.log(`txid: ${receipt}`)
-  }
-
-  async withdrawTimelockByTx() {
-    console.log("withdrawTimelock");
-    await this.mine(20, await this.wallet.getAddress());
-    console.log("current height: ", await this.wallet.getBTCTipHeight());
-
-    const withdrawalAddress = await this.wallet.getAddress();
-    const minimumFee = 1000;
-    const outputIndex = 0;
-
-    const { transaction } = withdrawalTimeLockTransactionByTx(
-      this.scripts,
-      this.stakingTx,
-      withdrawalAddress,
-      minimumFee,
-      network,
-      outputIndex
-    );
-
-    /*
-    async function signTransaction(transaction: Transaction, previousTx: Transaction, outputIndex: number, keyPair: ECPairInterface, signatureHashType = Transaction.SIGHASH_ALL) {
-      // const txHash = transaction.hashForSignature(0, previousTx.outs[outputIndex].script, signatureHashType);
-      // const signature = keyPair.sign(txHash);
-
-      // https://github.com/bitcoinjs/bitcoinjs-lib/blob/8d9775c20da03ab40ccbb1971251e71d117bcd8b/ts_src/psbt.ts#L1650-L1656
-      const txHash = transaction.hashForWitnessV0(outputIndex, previousTx.outs[outputIndex].script, previousTx.outs[outputIndex].value, signatureHashType);
-      // https://github.com/bitcoinjs/bitcoinjs-lib/blob/8d9775c20da03ab40ccbb1971251e71d117bcd8b/ts_src/psbt.ts#L852
-      const signature = script.signature.encode(keyPair.sign(txHash), signatureHashType);
-      return signature;
-    }
-
-    */
-    const delegatorKeyPair = await this.wallet.dumpPrivKey();
-    // const signature: Buffer = await signTransaction(transaction, this.stakingTx, outputIndex, keyPair);
-
-    // console.log(signature.toString("hex"));
-
-    console.log("script compare: ", this.scripts.stakingScript, this.stakingTx.outs[outputIndex].script); // false todo find reason
-
-    console.log("stakingTx outs: ", this.stakingTx.outs);
-    const signatureHash = transaction.hashForWitnessV0(outputIndex, this.scripts.stakingScript, this.stakingTx.outs[outputIndex].value, Transaction.SIGHASH_ALL);
-    const signature = delegatorKeyPair.sign(signatureHash);
-    const signatureWithHashType = Buffer.concat([signature, Buffer.from([Transaction.SIGHASH_ALL])]);
-
-    transaction.setWitness(0, [
-      signatureWithHashType,
-      delegatorKeyPair.publicKey,
-      Buffer.from(this.ownerEvmAddress.slice(2), "hex"),
-      this.scripts.stakingScript
-    ]);
-
-    console.log("witness: ", [
-      signatureWithHashType.toString("hex"),
-      delegatorKeyPair.publicKey.toString("hex"),
-      Buffer.from(this.ownerEvmAddress.slice(2), "hex").toString("hex"),
-      this.scripts.stakingScript.toString("hex")
-    ])
-
-    const txHex = transaction.toHex();
-
-    const receipt = await this.wallet.pushTx(txHex);
-    console.log(`txid: ${receipt}`)
-  }
-
-  async withdrawEarlyByTx() {
-    console.log("withdrawEarly");
-    await this.mine(20, await this.wallet.getAddress());
-
-    const withdrawalAddress = await this.wallet.getAddress();
-    const transactionFee = 1000;
-    const outputIndex = 0;
-
-    const { transaction } = withdrawalUnbondingTransactionByTx(
-      this.scripts,
-      this.stakingTx,
-      withdrawalAddress,
-      transactionFee,
-      network,
-      outputIndex
-    );
-
-    function signTransaction(tx: Transaction, vin: number, keyPair: any, redeemScript: Buffer, value: number) {
-      const sighash = tx.hashForWitnessV0(vin, redeemScript, value, Transaction.SIGHASH_ALL);
-      const signature = keyPair.sign(sighash);
-      return signature.toScriptSignature(Transaction.SIGHASH_ALL);
-    }
-
-    const signature = signTransaction(transaction, outputIndex, await this.wallet.dumpPrivKey(), Buffer.from(this.scripts.stakingScript, "hex"), this.stakingTx.outs[outputIndex].value);
-
-    const validatorSignature = signTransaction(transaction, outputIndex, this.validator, Buffer.from(this.scripts.stakingScript, "hex"), this.stakingTx.outs[outputIndex].value);
-
-    transaction.setWitness(0, [
-      invalidEthAddress.startsWith("0x") ?
-        Buffer.from(invalidEthAddress.slice(2), "hex") :
-        Buffer.from(invalidEthAddress, "hex"),
-      Buffer.concat([
-        Buffer.alloc(4, this.validatorIndex), // Ensure 4 bytes for validatorIndex
-        Buffer.alloc(4, this.nonce) // Ensure 4 bytes for nonce
-      ]),
-      validatorSignature, // todo how to get validatorSignature
-      signature
-    ]);
-
-    const txHex = transaction.toHex();
 
     const receipt = await this.wallet.pushTx(txHex);
     console.log(`txid: ${receipt}`)

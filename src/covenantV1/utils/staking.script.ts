@@ -8,8 +8,8 @@ const bip68 = require("bip68");
  * @param {Buffer} delegatorKey - The public key of the delegator.
  * @param {Buffer} validatorKey - The public key of the validator.
  * @param {number} transferTimeLock - The block count for the sequence verification.
- * @param {number} validatorIndex - Index of the validator.
- * @param {number} nonce - Nonce value for the transaction.
+ * @param {Buffer} validatorIndex - Index of the validator.
+ * @param {Buffer} nonce - Nonce value for the transaction.
  * @return {Buffer}
  */
 export function buildStakingScript(
@@ -17,26 +17,30 @@ export function buildStakingScript(
   delegatorKey: Buffer,
   validatorKey: Buffer,
   transferTimeLock: number,
-  validatorIndex: number,
-  nonce: number
+  validatorIndex: Buffer,
+  nonce: Buffer
 ): Buffer {
-  if (!Buffer.isBuffer(evmAddress) || !Buffer.isBuffer(delegatorKey) || !Buffer.isBuffer(validatorKey)) {
+  if (!Buffer.isBuffer(evmAddress) || !Buffer.isBuffer(delegatorKey) || !Buffer.isBuffer(validatorKey) || !Buffer.isBuffer(nonce) || !Buffer.isBuffer(validatorIndex)) {
     throw new Error("Invalid input types");
   }
   if (evmAddress.length !== ETH_PK_LENGTH || delegatorKey.length !== PK_LENGTH || validatorKey.length !== PK_LENGTH) {
     console.log(evmAddress.length, delegatorKey.length, validatorKey.length)
     throw new Error("Invalid input lengths");
   }
-  if (typeof transferTimeLock !== "number" || transferTimeLock < 0 || transferTimeLock > 65535 ||
-    typeof validatorIndex !== "number" || validatorIndex < 0 || validatorIndex > 4294967295 ||
-    typeof nonce !== "number" || nonce < 0 || nonce > 4294967295) {
+  if (typeof transferTimeLock !== "number" || transferTimeLock < 0 || transferTimeLock > 65535) {
     throw new Error("Invalid numeric inputs");
+  }
+  if (validatorIndex.length !== 4) {
+    throw new Error("Invalid validatorIndex input");
+  }
+  if (nonce.length !== 4) {
+    throw new Error("Invalid nonce input");
   }
 
   // Combine validatorIndex and nonce into a single Buffer
   const combineBytes = Buffer.concat([
-    Buffer.alloc(4, validatorIndex), // Ensure 4 bytes for validatorIndex
-    Buffer.alloc(4, nonce) // Ensure 4 bytes for nonce
+    validatorIndex,
+    nonce
   ]);
 
   const sequence = bip68.encode({ blocks: transferTimeLock });
@@ -46,28 +50,10 @@ export function buildStakingScript(
     evmAddress,
     opcodes.OP_EQUAL,
     opcodes.OP_IF,
-      opcodes.OP_DROP,
+      opcodes.OP_DROP, // Drop the result of OP_EQUAL
       script.number.encode(sequence),
       opcodes.OP_CHECKSEQUENCEVERIFY,
-      opcodes.OP_DROP, // Drop the sequence
-    opcodes.OP_ELSE,
-      opcodes.OP_DROP,
-      validatorKey,
-      opcodes.OP_CHECKSIGVERIFY,
-    opcodes.OP_ENDIF,
-    delegatorKey,
-    opcodes.OP_CHECKSIG
-  ])
-
-  return script.compile([
-    opcodes.OP_DUP,
-    evmAddress,
-    opcodes.OP_EQUAL,
-    opcodes.OP_IF,
-      opcodes.OP_DROP,
-      script.number.encode(sequence),
-      opcodes.OP_CHECKSEQUENCEVERIFY,
-      opcodes.OP_DROP,
+      opcodes.OP_DROP, // Drop the sequence number left by encode(sequence)
       delegatorKey,
       opcodes.OP_CHECKSIG,
     opcodes.OP_ELSE,
@@ -78,6 +64,6 @@ export function buildStakingScript(
       delegatorKey,
       opcodes.OP_2,
       opcodes.OP_CHECKMULTISIG,
-    opcodes.OP_ENDIF,
-  ]);
+    opcodes.OP_ENDIF
+  ])
 }

@@ -2,7 +2,7 @@ import {
   payments,
   Psbt,
   Transaction,
-  networks, address, script,
+  networks, address, script
 } from "bitcoinjs-lib";
 
 import { initBTCCurve } from "./utils/curve";
@@ -98,7 +98,7 @@ export function withdrawalTimeLockTransaction(
   withdrawalAddress: string,
   minimumFee: number,
   network: networks.Network,
-  outputIndex = 0,
+  outputIndex = 0
 ) {
   if (minimumFee <= 0) {
     throw new Error("Minimum fee must be bigger than 0");
@@ -123,7 +123,9 @@ export function withdrawalTimeLockTransaction(
     timelock = wrap === 0 ? 16 : wrap;
   }
 
-  console.log("Timelock:", timelock);
+  if (Number.isNaN(timelock) || timelock < 0 || timelock > 65535) {
+    throw new Error("Timelock script is not valid");
+  }
 
   const psbt = new Psbt({ network });
 
@@ -184,90 +186,4 @@ export function withdrawalUnbondingTransaction(
   });
 
   return { psbt };
-}
-
-export function withdrawalTimeLockTransactionByTx(
-  scripts: {
-    stakingScript: Buffer,
-  },
-  stakingTransaction: Transaction,
-  withdrawalAddress: string,
-  minimumFee: number,
-  network: networks.Network,
-  outputIndex = 0
-) {
-  if (minimumFee <= 0) {
-    throw new Error("Minimum fee must be bigger than 0");
-  }
-
-  const decompiled = script.decompile(scripts.stakingScript);
-
-  if (!decompiled) {
-    throw new Error("Timelock script is not valid");
-  }
-
-  const timePosition = 5;
-  let timelock = 0;
-
-  if (Buffer.isBuffer(decompiled[timePosition])) {
-    const timeBuffer = decompiled[timePosition] as Buffer;
-    timelock = script.number.decode(timeBuffer);
-  } else {
-    const wrap = decompiled[timePosition] as number % 16;
-    timelock = wrap === 0 ? 16 : wrap;
-  }
-
-  console.log("Timelock:", timelock);
-
-  const transaction = new Transaction();
-
-  transaction.addInput(
-    stakingTransaction.getHash(),
-    outputIndex,
-    timelock,
-    // stakingTransaction.outs[outputIndex].script
-  );
-
-  transaction.addOutput(
-    address.toOutputScript(withdrawalAddress, network),
-    stakingTransaction.outs[outputIndex].value - minimumFee
-  );
-
-  return { transaction };
-}
-
-
-export function withdrawalUnbondingTransactionByTx(
-  scripts: {
-    stakingScript: Buffer,
-  },
-  stakingTransaction: Transaction,
-  withdrawalAddress: string,
-  transactionFee: number,
-  network: networks.Network,
-  outputIndex = 0
-) {
-  if (transactionFee <= 0) {
-    throw new Error("Transaction fee must be bigger than 0");
-  }
-
-  if (outputIndex < 0) {
-    throw new Error("Output index must be bigger or equal to 0");
-  }
-
-  const transaction = new Transaction();
-
-  transaction.addInput(
-    stakingTransaction.getHash(),
-    outputIndex,
-    Transaction.DEFAULT_SEQUENCE,
-    stakingTransaction.outs[outputIndex].script
-  );
-
-  transaction.addOutput(
-    address.toOutputScript(withdrawalAddress, network),
-    stakingTransaction.outs[outputIndex].value - transactionFee
-  );
-
-  return { transaction };
 }
