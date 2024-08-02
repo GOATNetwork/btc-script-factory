@@ -47,7 +47,7 @@ const validateCommonFields = (
 
 
 describe("depositTransaction", () => {
-  const posKey = "d6ce14162f3954bac0fff55a12b6df7d614801f358b5d910fe7986a47102e657";
+  const posKey = "d6ce14162f3954bac0fff55a12b6df7d614801f358b5d910fe7986a47102e65712";
   const ownerEvmAddress = "0x2915fd8beebdc822887deceac3dfe1540fac9c81";
   const evmAddressBuffer = Buffer.from(ownerEvmAddress.slice(2), "hex");
   const posPubkeyBuffer = Buffer.from(posKey, "hex");

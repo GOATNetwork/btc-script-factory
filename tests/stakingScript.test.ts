@@ -5,8 +5,8 @@ describe("stakingScript", () => {
   const delegatorKey = "023d02b47df037a43cb4354c72f162da99f5bd558209ca851816ca9170fe291da7";
   const ownerEvmAddress = "0x2915fd8beebdc822887deceac3dfe1540fac9c81";
   const validatorKey = "031944507b30d7a911d12532732e4877ed41b9f05fe2242df22e045436354a077b";
-  const validatorNodeIndex = 0xef921bb0;
-  const nonce = 0x537d5579;
+  const validatorNodeIndex = Buffer.from("ef921bb0", "hex");
+  const nonce = Buffer.from("537d5579", "hex");
   const lockBlockNumber = 0x02;
 
   it("should build a valid staking script", () => {
@@ -27,8 +27,8 @@ describe("stakingScript", () => {
 
     // Expected script components
     const combineBytes = Buffer.concat([
-      Buffer.alloc(4, validatorNodeIndex),
-      Buffer.alloc(4, nonce)
+      validatorNodeIndex,
+      nonce
     ]);
 
     const expectedScript = script.compile([
@@ -112,9 +112,9 @@ describe("stakingScript", () => {
       Buffer.from(delegatorKey, "hex"),
       Buffer.from(validatorKey, "hex"),
       lockBlockNumber,
-      -1, // Invalid validatorIndex
+      Buffer.from("1", "hex"), // Invalid validatorIndex
       nonce
-    )).toThrow("Invalid numeric inputs");
+    )).toThrow("Invalid validatorIndex input");
 
     expect(() => buildStakingScript(
       Buffer.from(ownerEvmAddress.slice(2), "hex"),
@@ -122,7 +122,7 @@ describe("stakingScript", () => {
       Buffer.from(validatorKey, "hex"),
       lockBlockNumber,
       validatorNodeIndex,
-      -1 // Invalid nonce
-    )).toThrow("Invalid numeric inputs");
+      Buffer.from("1", "hex") // Invalid nonce
+    )).toThrow("Invalid nonce input");
   });
 });
