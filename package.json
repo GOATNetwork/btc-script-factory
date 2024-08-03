@@ -39,7 +39,7 @@
     "tiny-secp256k1": "^2.2.3",
     "typeforce": "^1.11.3",
     "varuint-bitcoin": "^1.1.2",
-    "walletprovider-ts": "github:GOATNetwork/walletprovider-ts#add_psbt"
+    "walletprovider-ts": "github:GOATNetwork/walletprovider-ts#main"
   },
   "devDependencies": {
     "@types/babel__generator": "^7.6.8",
