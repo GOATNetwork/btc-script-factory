@@ -94,8 +94,8 @@ class StakingProtocol {
         );
         this.scripts = scriptData.buildScripts();
         let changeAddress = await this.wallet.getAddress();
-        let inputUTXOs = await this.wallet.getUtxos(stakerAddress);
-        // console.log("Staker utxos", inputUTXOs);
+        let inputUTXOs = await this.wallet.getUtxos(stakerAddress, lockingAmount + 1e4);
+        console.log("Staker utxos", inputUTXOs);
         let feeRate = 1000;
         let publicKeyNoCoord = stakerPk;
 
