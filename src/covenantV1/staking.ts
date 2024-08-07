@@ -5,13 +5,13 @@ import {
   networks, address, script
 } from "bitcoinjs-lib";
 
-import { initBTCCurve } from "./utils/curve";
-import { buildDepositScript } from "./utils/bridge.script";
-import { UTXO } from "./types/UTXO";
-import { inputValueSum, getDepositTxInputUTXOsAndFees } from "./utils/fee";
-import { PsbtTransactionResult } from "../staking/types/transaction";
+import { initBTCCurve } from "../utils/curve";
+import { buildStakingScript } from "./staking.script";
+import { UTXO } from "../types/UTXO";
+import { inputValueSum, getTxInputUTXOsAndFees } from "../utils/fee";
+import { PsbtTransactionResult } from "../types/transaction";
 
-export { initBTCCurve, buildDepositScript };
+export { initBTCCurve, buildStakingScript };
 
 // https://bips.xyz/370
 const BTC_LOCKTIME_HEIGHT_TIME_CUTOFF = 500000000;
@@ -45,7 +45,7 @@ export function stakingTransaction(
     network
   });
 
-  const { selectedUTXOs, fee } = getDepositTxInputUTXOsAndFees(inputUTXOs, amount, feeRate, 2);
+  const { selectedUTXOs, fee } = getTxInputUTXOsAndFees(inputUTXOs, amount, feeRate, 2);
 
   selectedUTXOs.forEach((input) => {
     psbt.addInput({

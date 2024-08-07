@@ -3,7 +3,7 @@ import * as ecc from "tiny-secp256k1";
 import { initEccLib, networks, Psbt, Transaction } from "bitcoinjs-lib";
 import { BitcoinCoreWallet } from "walletprovider-ts/lib/providers/bitcoin_core_wallet";
 import { buildDefaultBitcoinCoreWallet } from "./wallet.setting"
-import { buildDepositScript } from "../src/covenantV1/utils/bridge.script";
+import { buildDepositScript } from "../src/covenantV1/bridge.script";
 import { depositTransaction } from "../src/covenantV1/bridge";
 import { signPsbtFromBase64 } from "./signpsbt";
 
@@ -65,7 +65,7 @@ class DepositProtocol {
     }
 
     async buildScripts() {
-      const posPubkey = "d6ce14162f3954bac0fff55a12b6df7d614801f358b5d910fe7986a47102e657"
+      const posPubkey = "d6ce14162f3954bac0fff55a12b6df7d614801f358b5d910fe7986a47102e65712"
       const depositScript = buildDepositScript(
         ethAddress.startsWith("0x") ?
           Buffer.from(ethAddress.slice(2), "hex") :
@@ -197,7 +197,9 @@ async function run() {
 
     await bridgeProtocol.check_balance();
 
-    // recapture timelock
+    await bridgeProtocol.wallet.walletPassphrase("btcstaker", 1000);
+
+  // recapture timelock
     {
         // await bridgeProtocol.mine(DEPOSIT_TIMELOCK, await bridgeProtocol.wallet.getAddress());
         // await bridgeProtocol.check_balance();

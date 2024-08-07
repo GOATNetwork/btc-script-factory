@@ -1,8 +1,8 @@
 import BIP32Factory, { BIP32Interface } from "bip32";
 import * as ecc from "tiny-secp256k1";
 import { initEccLib, networks, Psbt, Transaction } from "bitcoinjs-lib";
-import * as staking from "../src/staking";
-import * as stakingScript from "../src/staking/utils/stakingScript";
+import * as staking from "../src/slashable/staking";
+import * as stakingScript from "../src/slashable/staking/script";
 import { BitcoinCoreWallet } from "walletprovider-ts/lib/providers/bitcoin_core_wallet";
 import { buildDefaultBitcoinCoreWallet } from "./wallet.setting"
 
@@ -94,7 +94,7 @@ class StakingProtocol {
         );
         this.scripts = scriptData.buildScripts();
         let changeAddress = await this.wallet.getAddress();
-        let inputUTXOs = await this.wallet.getUtxos(stakerAddress, lockingAmount + 1e4);
+        let inputUTXOs = await this.wallet.getUtxos(stakerAddress, lockingAmount + 5e7);
         console.log("Staker utxos", inputUTXOs);
         let feeRate = 1000;
         let publicKeyNoCoord = stakerPk;

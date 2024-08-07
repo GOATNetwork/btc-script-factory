@@ -2,9 +2,9 @@
 import { networks } from "bitcoinjs-lib";
 import { buildDepositScript, depositTransaction } from "../src/covenantV1/bridge";
 import WalletUtils from "./helper/walletUtils";
-import { PsbtTransactionResult } from "../lib/covenantV1/types/transaction";
-import { getDepositTxInputUTXOsAndFees } from "../src/covenantV1/utils/fee";
-import { inputValueSum } from "../lib/covenantV1/utils/fee";
+import { PsbtTransactionResult } from "../src/types/transaction";
+import { getTxInputUTXOsAndFees } from "../src/utils/fee";
+import { inputValueSum } from "../src/utils/fee";
 // Set the test timeout for long-running tests
 // jest.setTimeout(30000);
 
@@ -69,7 +69,7 @@ describe("depositTransaction", () => {
       feeRate
     );
 
-    const { fee: estimatedFee } = getDepositTxInputUTXOsAndFees(inputUTXOs, amount, feeRate, 2);
+    const { fee: estimatedFee } = getTxInputUTXOsAndFees(inputUTXOs, amount, feeRate, 2);
 
     // Perform detailed validations
     validateCommonFields({ psbt, fee }, amount, estimatedFee, changeAddress);
@@ -88,7 +88,7 @@ describe("depositTransaction", () => {
       inputUTXOs,
       network,
       feeRate
-    )).toThrow("Insufficient funds: unable to gather enough UTXOs to cover the deposit amount and fees.");
+    )).toThrow("Insufficient funds: unable to gather enough UTXOs to cover the amount and fees.");
   });
 
   it("should throw an error if the transaction amount is zero or negative", async () => {

@@ -2,7 +2,7 @@
 import { networks, Transaction } from "bitcoinjs-lib";
 import { stakingTransaction, withdrawalTimeLockTransaction, withdrawalUnbondingTransaction } from "../src/covenantV1/staking";
 import WalletUtils from "./helper/walletUtils";
-import { buildStakingScript } from "../src/covenantV1/utils/staking.script"; // Assuming this exists for fetching addresses and UTXOs
+import { buildStakingScript } from "../src/covenantV1/staking.script"; // Assuming this exists for fetching addresses and UTXOs
 
 // Set up a test network environment
 const regtest = networks.regtest;
