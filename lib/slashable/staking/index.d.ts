@@ -1,4 +1,3 @@
-/// <reference types="node" />
 import { Psbt, Transaction, networks } from "bitcoinjs-lib";
 import { initBTCCurve } from "../../utils/curve";
 import { StakingScriptData } from "./script";
@@ -14,13 +13,13 @@ export { type UTXO, type StakingScripts };
  * - psbt:
  *   - The first output corresponds to the staking script with the specified amount.
  *   - The second output corresponds to the change from spending the amount and the transaction fee.
- *   - If a data embed script is provided, it will be added as the second output, and the fee will be the third output.
+ *   - If a provably note script is provided, it will be added as the second output, and the fee will be the third output.
  * - fee: The total fee amount for the transaction.
  *
  * Inputs:
  * - scripts:
  *   - timelockScript, unbondingScript, slashingScript: Scripts for different transaction types.
- *   - dataEmbedScript: Optional data embed script.
+ *   - provablyNoteScript: Optional provably note script.
  * - amount: Amount to stake.
  * - changeAddress: Address to send the change to.
  * - inputUTXOs: All available UTXOs from the wallet.
@@ -30,7 +29,7 @@ export { type UTXO, type StakingScripts };
  * - lockHeight: Optional block height locktime to set for the transaction (i.e., not mined until the block height).
  *
  * @param {Object} scripts - Scripts used to construct the taproot output.
- * such as timelockScript, unbondingScript, slashingScript, and dataEmbedScript.
+ * such as timelockScript, unbondingScript, slashingScript, and provablyNoteScript.
  * @param {number} amount - The amount to stake.
  * @param {string} changeAddress - The address to send the change to.
  * @param {UTXO[]} inputUTXOs - All available UTXOs from the wallet.
@@ -46,7 +45,7 @@ export declare function stakingTransaction(scripts: {
     timelockScript: Buffer;
     unbondingScript: Buffer;
     slashingScript: Buffer;
-    dataEmbedScript?: Buffer;
+    provablyNoteScript?: Buffer;
 }, amount: number, changeAddress: string, inputUTXOs: UTXO[], network: networks.Network, feeRate: number, publicKeyNoCoord?: Buffer, lockHeight?: number): PsbtTransactionResult;
 /**
  * Constructs a withdrawal transaction for manually unbonded delegation.
@@ -208,7 +207,7 @@ export declare const createWitness: (originalWitness: Buffer[], paramsCovenants:
  * @param {Buffer} scripts.timelockScript - Script to lock the transaction by height.
  * @param {Buffer} scripts.slashingScript - Script for slashing.
  * @param {Buffer} scripts.unbondingScript - Script for unbonding.
- * @param {Buffer} [scripts.dataEmbedScript] - Optional script for embedding additional data.
+ * @param {Buffer} [scripts.provablyNoteScript] - Optional script for provably note.
  * @param {Transaction} tx - The original transaction to continue staking.
  * @param {networks.Network} network - The Bitcoin network to use (mainnet, testnet, etc.).
  * @param {number} feeRate - Fee rate in satoshis per byte.
@@ -224,12 +223,32 @@ export declare function continueTimelockStakingTransaction(scripts: {
     timelockScript: Buffer;
     slashingScript: Buffer;
     unbondingScript: Buffer;
-    dataEmbedScript?: Buffer;
+    provablyNoteScript?: Buffer;
 }, tx: Transaction, network: networks.Network, feeRate: number, outputIndex: number | undefined, additionalAmount: number | undefined, changeAddress: string, inputUTXOs: UTXO[], publicKeyNoCoord?: Buffer, lockHeight?: number): PsbtTransactionResult;
+/**
+ * Creates a PSBT transaction to continue unbonded staking.
+ *
+ * @param {Object} scripts - Scripts for different stages of the transaction.
+ * @param {Buffer} scripts.timelockScript - Script to lock the transaction by height.
+ * @param {Buffer} scripts.slashingScript - Script for slashing.
+ * @param {Buffer} scripts.unbondingScript - Script for unbonding.
+ * @param {Buffer} [scripts.provablyNoteScript] - Optional script for storing provably data.
+ * @param {Transaction} stakingTx - The original transaction to continue staking.
+ * @param {number} transactionFee - the fee for current transaction.
+ * @param {networks.Network} network - The Bitcoin network to use (mainnet, testnet, etc.).
+ * @param {number} [outputIndex=0] - Index of the output to be spent.
+ * @param {number} [additionalAmount=0] - Additional amount to be added to the output.
+ * @param {string} changeAddress - Address for the change output.
+ * @param {UTXO[]} inputUTXOs - Array of UTXOs to be used as inputs.
+ * @param {number} feeRate - Fee rate in satoshis per byte.
+ * @param {Buffer} [publicKeyNoCoord] - Optional public key without coordinates.
+ * @param {number} [lockHeight] - Optional lock height for the transaction.
+ * @return {PsbtTransactionResult} - The result containing the PSBT transaction and additional data.
+ */
 export declare function continueUnbondingStakingTransaction(scripts: {
     unbondingScript: Buffer;
     unbondingTimelockScript: Buffer;
     timelockScript: Buffer;
     slashingScript: Buffer;
-    dataEmbedScript: Buffer;
+    provablyNoteScript: Buffer;
 }, stakingTx: Transaction, transactionFee: number, network: networks.Network, outputIndex: number | undefined, additionalAmount: number | undefined, changeAddress: string, inputUTXOs: UTXO[], feeRate: number, publicKeyNoCoord?: Buffer, lockHeight?: number): PsbtTransactionResult;

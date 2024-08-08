@@ -1,4 +1,3 @@
-/// <reference types="node" />
 import { StakingScripts } from "../../types/StakingScripts";
 export declare const PK_LENGTH = 32;
 export declare class StakingScriptData {
@@ -47,23 +46,22 @@ export declare class StakingScriptData {
     /**
      * Builds the slashing script for staking in the form:
      *    buildSingleKeyScript(stakerPk, true) ||
-     *    buildMultiKeyScript(finalityProviderPKs, 1, true) ||
      *    buildMultiKeyScript(covenantPks, covenantThreshold, false)
      *    || means combining the scripts
      * The slashing script is a combination of single-key and multi-key scripts.
      * The single-key script is used for staker key verification.
-     * The multi-key script is used for finality provider key verification and covenant key verification.
+     * The multi-key script is used for covenant key verification.
      * @return {Buffer} The slashing script as a Buffer.
      */
     buildSlashingScript(): Buffer;
     /**
-     * Builds a data embed script for staking in the form:
+     * Builds a data script for staking in the form:
      *    OP_RETURN || <serializedStakingData>
      * where serializedStakingData is the concatenation of:
-     *    MagicBytes || Version || StakerPublicKey || FinalityProviderPublicKey || StakingTimeLock
-     * @return {Buffer} The compiled data embed script.
+     *    MagicBytes || Version || StakerPublicKey || StakingTimeLock
+     * @return {Buffer} The compiled provably note script.
      */
-    buildDataEmbedScript(): Buffer;
+    buildProvablyNoteScript(): Buffer;
     /**
      * Builds the staking scripts.
      * @return {StakingScripts} The staking scripts.

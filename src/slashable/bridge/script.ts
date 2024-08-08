@@ -86,7 +86,7 @@ export class BridgeScriptData {
     );
   }
 
-  buildDataEmbedScript(): Buffer {
+  buildProvablyNoteScript(): Buffer {
     const version = Buffer.alloc(1);
     version.writeUInt8(0);
 
@@ -103,7 +103,7 @@ export class BridgeScriptData {
   buildScripts(): BridgeScripts {
     return {
       timelockScript: this.buildTransferTimeLockScript(),
-      dataEmbedScript: this.buildDataEmbedScript(),
+      provablyNoteScript: this.buildProvablyNoteScript(),
       transferScript: this.buildTransferScript()
     };
   }

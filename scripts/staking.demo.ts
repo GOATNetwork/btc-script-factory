@@ -1,52 +1,26 @@
-import BIP32Factory, { BIP32Interface } from "bip32";
+import { BIP32Interface } from "bip32";
 import * as ecc from "tiny-secp256k1";
 import { initEccLib, networks, Psbt, Transaction } from "bitcoinjs-lib";
 import * as staking from "../src/slashable/staking";
 import * as stakingScript from "../src/slashable/staking/script";
 import { BitcoinCoreWallet } from "walletprovider-ts/lib/providers/bitcoin_core_wallet";
-import { buildDefaultBitcoinCoreWallet } from "./wallet.setting"
+import { mnemonicArray, deriveKey, buildDefaultBitcoinCoreWallet } from "./wallet.setting"
 
 import { signPsbtFromBase64 } from "./signpsbt";
 
-const bip32 = BIP32Factory(ecc);
-// import * as assert from 'assert';
 const network = networks.regtest;
-
-const bip39 = require("bip39")
-// const rng = require("randombytes");
 
 initEccLib(ecc);
 
 const STAKING_TIMELOCK = 20;
 const UNBONDING_TIMELOCK = 10;
 
-const mnemonicArray = [
-    "worth pottery emotion apology alone coast evil tortoise calm normal cotton how",
-    "worth pottery emotion apology alone coast evil tortoise calm normal cotton are",
-    "worth pottery emotion apology alone coast evil tortoise calm normal cotton you",
-    "worth pottery emotion apology alone coast evil tortoise calm normal cotton hello"
-];
-
-async function deriveKey(mnemonic: string) {
-    // Verify the above (Below is no different than other HD wallets)
-
-    // let mnemonic = "worth pottery emotion apology alone coast evil tortoise calm normal cotton exchange";
-    const seed = await bip39.mnemonicToSeed(mnemonic);
-
-    // const rootKey = bip32.fromSeed(rng(64), network);
-    const rootKey = bip32.fromSeed(seed, network);
-    // https://github.com/bitcoinjs/bip32/blob/master/test/index.js
-    // const path = `m/86'/0'/0'/0/0`; // Path to first child of receiving wallet on first account
-    const path = "m/84'/1'/0'/0/0";
-    return rootKey.derivePath(path);
-}
-
 const lockingAmount = 5e7; // Satoshi
 async function initAccount(numCovenants: number): Promise<BIP32Interface[]> {
     let accounts = new Array(numCovenants);
     // staker, covenants...covenants+numConv
     for (let i = 0; i < accounts.length; i++) {
-        accounts[i] = await deriveKey(mnemonicArray[i]);
+        accounts[i] = await deriveKey(mnemonicArray[i], network);
     }
     return accounts;
 }
@@ -574,7 +548,7 @@ async function run() {
       await stakingProtocol.withdrawEarlyUnbounded();
     }
     //
-    // // continue lock
+    // // natively continue lock
     // {
     //   await stakingProtocol.mine(STAKING_TIMELOCK, await stakingProtocol.wallet.getAddress());
     //   await stakingProtocol.check_balance();
