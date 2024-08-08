@@ -1,4 +1,4 @@
-import { buildDepositScript } from "../src/covenantV1/utils/bridge.script";
+import { buildDepositScript } from "../src/covenantV1/bridge.script";
 import { script, opcodes } from "bitcoinjs-lib";
 
 describe("bridgeScript", () => {

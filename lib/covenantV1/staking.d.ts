@@ -1,10 +1,10 @@
 /// <reference types="node" />
 import { Psbt, Transaction, networks } from "bitcoinjs-lib";
-import { initBTCCurve } from "./utils/curve";
-import { buildDepositScript } from "./utils/bridge.script";
-import { UTXO } from "./types/UTXO";
-import { PsbtTransactionResult } from "../staking/types/transaction";
-export { initBTCCurve, buildDepositScript };
+import { initBTCCurve } from "../utils/curve";
+import { buildStakingScript } from "./staking.script";
+import { UTXO } from "../types/UTXO";
+import { PsbtTransactionResult } from "../types/transaction";
+export { initBTCCurve, buildStakingScript };
 export declare function stakingTransaction(scripts: {
     stakingScript: Buffer;
 }, amount: number, changeAddress: string, inputUTXOs: UTXO[], network: networks.Network, feeRate: number, lockHeight?: number): PsbtTransactionResult;

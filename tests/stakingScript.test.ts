@@ -1,4 +1,4 @@
-import { buildStakingScript } from "../src/covenantV1/utils/staking.script";
+import { buildStakingScript } from "../src/covenantV1/staking.script";
 import { script, opcodes } from "bitcoinjs-lib";
 
 describe("stakingScript", () => {

@@ -4,7 +4,7 @@ import { initEccLib, networks, opcodes, payments, Psbt, script as bitcoinScript,
 import { BitcoinCoreWallet } from "walletprovider-ts/lib/providers/bitcoin_core_wallet";
 import { buildDefaultBitcoinCoreWallet } from "./wallet.setting"
 
-import { buildStakingScript } from "../src/covenantV1/utils/staking.script";
+import { buildStakingScript } from "../src/covenantV1/staking.script";
 import { stakingTransaction, withdrawalTimeLockTransaction, withdrawalUnbondingTransaction } from "../src/covenantV1/staking";
 import { PsbtInput } from "bip174/src/lib/interfaces";
 import { witnessStackToScriptWitness } from "bitcoinjs-lib/src/psbt/psbtutils";
@@ -321,7 +321,8 @@ async function run() {
     await stakingProtocol.check_balance();
     await stakingProtocol.withdrawTimelock();
   }
-  // withdraw timelock
+
+  // withdraw early
   {
     await stakingProtocol.mine(STAKING_TIMELOCK, await stakingProtocol.wallet.getAddress());
     await stakingProtocol.check_balance();
