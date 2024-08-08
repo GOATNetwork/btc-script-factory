@@ -4,5 +4,5 @@ export interface StakingScripts {
   unbondingScript: Buffer;
   slashingScript: Buffer;
   unbondingTimelockScript: Buffer;
-  dataEmbedScript: Buffer;
+  provablyNoteScript: Buffer;
 }

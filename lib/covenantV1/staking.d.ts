@@ -1,4 +1,3 @@
-/// <reference types="node" />
 import { Psbt, Transaction, networks } from "bitcoinjs-lib";
 import { initBTCCurve } from "../utils/curve";
 import { buildStakingScript } from "./staking.script";

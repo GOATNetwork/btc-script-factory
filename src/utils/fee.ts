@@ -29,7 +29,7 @@ export const TX_BUFFER_SIZE_FOR_FEE_CAL = 10;
  * @return {number} The estimated transaction fee in satoshis.
  */
 export const getEstimatedFee = (
-  feeRate : number, numInputs : number, numOutputs : number,
+  feeRate : number, numInputs : number, numOutputs : number
 ) : number => {
   return (
     numInputs * INPUT_SIZE_FOR_FEE_CAL +
@@ -70,7 +70,7 @@ export const getTxInputUTXOsAndFees = (
   availableUTXOs : UTXO[],
   amount : number,
   feeRate : number,
-  numOfOutputs : number,
+  numOfOutputs : number
 ) : {
   selectedUTXOs : UTXO[],
   fee : number,
@@ -103,6 +103,6 @@ export const getTxInputUTXOsAndFees = (
 
   return {
     selectedUTXOs,
-    fee: estimatedFee,
+    fee: estimatedFee
   };
 }

@@ -25,7 +25,7 @@ export function depositTransaction(
   scripts: {
     timelockScript: Buffer,
     transferScript: Buffer,
-    dataEmbedScript?: Buffer,
+    provablyNoteScript?: Buffer,
   },
   amount: number,
   changeAddress: string,
@@ -50,9 +50,9 @@ export function depositTransaction(
     throw new Error("Invalid public key");
   }
 
-  // Calculate the number of outputs based on the presence of the data embed script
+  // Calculate the number of outputs based on the presence of the provably note script
   // We have 2 outputs by default: deposit output and change output
-  const numOutputs = scripts.dataEmbedScript ? 3 : 2;
+  const numOutputs = scripts.provablyNoteScript? 3 : 2;
   const { selectedUTXOs, fee } = getTxInputUTXOsAndFees(
     inputUTXOs, amount, feeRate, numOutputs
   );
@@ -93,10 +93,10 @@ export function depositTransaction(
     value: amount
   });
 
-  if (scripts.dataEmbedScript) {
-    // Add the data embed output to the transaction
+  if (scripts.provablyNoteScript) {
+    // Add the data output to the transaction
     psbt.addOutput({
-      script: scripts.dataEmbedScript,
+      script: scripts.provablyNoteScript,
       value: 0
     });
   }
@@ -131,7 +131,7 @@ export function sendTransaction(
   scripts: {
     timelockScript: Buffer,
     transferScript: Buffer,
-    dataEmbedScript?: Buffer,
+    provablyNoteScript?: Buffer,
   },
   depositTransaction: Transaction,
   sendAddress: string,
@@ -194,7 +194,7 @@ export function recaptureTransferTimelockTransaction(
   scripts: {
     timelockScript: Buffer,
     transferScript: Buffer,
-    dataEmbedScript?: Buffer,
+    provablyNoteScript?: Buffer,
   },
   tx: Transaction,
   recaptureAddress: string,
@@ -335,7 +335,7 @@ function createP2MS(pks: string[], m: number, network: networks.Network) {
 
 export function depositP2SHTransaction(
   scripts: {
-    dataEmbedScript?: Buffer,
+    provablyNoteScript?: Buffer,
   },
   amount: number,
   changeAddress: string,
@@ -349,7 +349,7 @@ export function depositP2SHTransaction(
     throw new Error("Amount and fee rate must be bigger than 0");
   }
 
-  const numOutputs = scripts.dataEmbedScript ? 3 : 2;
+  const numOutputs = scripts.provablyNoteScript? 3 : 2;
   const p2ms = createP2MS(pubKeys, m, network);
   const { selectedUTXOs, fee } = getTxInputUTXOsAndFees(inputUTXOs, amount, feeRate, numOutputs);
 
@@ -371,9 +371,9 @@ export function depositP2SHTransaction(
     value: amount
   });
 
-  if (scripts.dataEmbedScript) {
+  if (scripts.provablyNoteScript) {
     psbt.addOutput({
-      script: scripts.dataEmbedScript,
+      script: scripts.provablyNoteScript,
       value: 0
     });
   }
@@ -429,7 +429,7 @@ export function sendP2SHTransaction(
 
 export function depositP2PKHTransaction(
   scripts: {
-    dataEmbedScript?: Buffer,
+    provablyNoteScript?: Buffer,
   },
   amount: number,
   changeAddress: string,
@@ -443,9 +443,9 @@ export function depositP2PKHTransaction(
     throw new Error("Amount and fee rate must be bigger than 0");
   }
 
-  // Calculate the number of outputs based on the presence of the data embed script
+  // Calculate the number of outputs based on the presence of the provably note script
   // We have 2 outputs by default: deposit output and change output
-  const numOutputs = scripts.dataEmbedScript ? 3 : 2;
+  const numOutputs = scripts.provablyNoteScript? 3 : 2;
   const { selectedUTXOs, fee } = getTxInputUTXOsAndFees(
     inputUTXOs, amount, feeRate, numOutputs
   );
@@ -470,10 +470,10 @@ export function depositP2PKHTransaction(
     value: amount
   });
 
-  if (scripts.dataEmbedScript) {
-    // Add the data embed output to the transaction
+  if (scripts.provablyNoteScript) {
+    // Add the provably note output to the transaction
     psbt.addOutput({
-      script: scripts.dataEmbedScript,
+      script: scripts.provablyNoteScript,
       value: 0
     });
   }

@@ -1,4 +1,3 @@
-/// <reference types="node" />
 import { BridgeScripts } from "../../types/BridgeScripts";
 export declare const PK_LENGTH = 32;
 export declare const ETH_PK_LENGTH = 20;
@@ -9,6 +8,6 @@ export declare class BridgeScriptData {
     buildTimelockScript(timelock: number): Buffer;
     buildTransferTimeLockScript(): Buffer;
     buildTransferScript(): Buffer;
-    buildDataEmbedScript(): Buffer;
+    buildProvablyNoteScript(): Buffer;
     buildScripts(): BridgeScripts;
 }

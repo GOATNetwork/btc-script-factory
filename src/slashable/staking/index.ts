@@ -30,13 +30,13 @@ const BTC_DUST_SAT = 546;
  * - psbt:
  *   - The first output corresponds to the staking script with the specified amount.
  *   - The second output corresponds to the change from spending the amount and the transaction fee.
- *   - If a data embed script is provided, it will be added as the second output, and the fee will be the third output.
+ *   - If a provably note script is provided, it will be added as the second output, and the fee will be the third output.
  * - fee: The total fee amount for the transaction.
  *
  * Inputs:
  * - scripts:
  *   - timelockScript, unbondingScript, slashingScript: Scripts for different transaction types.
- *   - dataEmbedScript: Optional data embed script.
+ *   - provablyNoteScript: Optional provably note script.
  * - amount: Amount to stake.
  * - changeAddress: Address to send the change to.
  * - inputUTXOs: All available UTXOs from the wallet.
@@ -46,7 +46,7 @@ const BTC_DUST_SAT = 546;
  * - lockHeight: Optional block height locktime to set for the transaction (i.e., not mined until the block height).
  *
  * @param {Object} scripts - Scripts used to construct the taproot output.
- * such as timelockScript, unbondingScript, slashingScript, and dataEmbedScript.
+ * such as timelockScript, unbondingScript, slashingScript, and provablyNoteScript.
  * @param {number} amount - The amount to stake.
  * @param {string} changeAddress - The address to send the change to.
  * @param {UTXO[]} inputUTXOs - All available UTXOs from the wallet.
@@ -63,7 +63,7 @@ export function stakingTransaction(
     timelockScript: Buffer,
     unbondingScript: Buffer,
     slashingScript: Buffer,
-    dataEmbedScript?: Buffer,
+    provablyNoteScript?: Buffer,
   },
   amount: number,
   changeAddress: string,
@@ -88,9 +88,9 @@ export function stakingTransaction(
     throw new Error("Invalid public key");
   }
 
-  // Calculate the number of outputs based on the presence of the data embed script
+  // Calculate the number of outputs based on the presence of the provably note script
   // We have 2 outputs by default: staking output and change output
-  const numOutputs = scripts.dataEmbedScript ? 3 : 2;
+  const numOutputs = scripts.provablyNoteScript ? 3 : 2;
   const { selectedUTXOs, fee } = getTxInputUTXOsAndFees(
     inputUTXOs, amount, feeRate, numOutputs
   );
@@ -134,10 +134,10 @@ export function stakingTransaction(
     value: amount
   });
 
-  if (scripts.dataEmbedScript) {
-    // Add the data embed output to the transaction
+  if (scripts.provablyNoteScript) {
+    // Add the provably note output to the transaction
     psbt.addOutput({
-      script: scripts.dataEmbedScript,
+      script: scripts.provablyNoteScript,
       value: 0
     });
   }
@@ -753,7 +753,7 @@ export const createWitness = (
  * @param {Buffer} scripts.timelockScript - Script to lock the transaction by height.
  * @param {Buffer} scripts.slashingScript - Script for slashing.
  * @param {Buffer} scripts.unbondingScript - Script for unbonding.
- * @param {Buffer} [scripts.dataEmbedScript] - Optional script for embedding additional data.
+ * @param {Buffer} [scripts.provablyNoteScript] - Optional script for provably note.
  * @param {Transaction} tx - The original transaction to continue staking.
  * @param {networks.Network} network - The Bitcoin network to use (mainnet, testnet, etc.).
  * @param {number} feeRate - Fee rate in satoshis per byte.
@@ -770,7 +770,7 @@ export function continueTimelockStakingTransaction(
     timelockScript: Buffer, // may be a new timelockScript by lockHeight
     slashingScript: Buffer,
     unbondingScript: Buffer,
-    dataEmbedScript?: Buffer,
+    provablyNoteScript?: Buffer,
   },
   tx: Transaction,
   network: networks.Network,
@@ -878,7 +878,7 @@ export function continueTimelockStakingTransaction(
   }
 
   // Determine number of outputs
-  const numOutputs = scripts.dataEmbedScript ? 3 : 2;
+  const numOutputs = scripts.provablyNoteScript ? 3 : 2;
   const { selectedUTXOs, fee } = getTxInputUTXOsAndFees(inputUTXOs, additionalAmount, feeRate, numOutputs);
 
   // Add UTXOs as inputs
@@ -901,10 +901,10 @@ export function continueTimelockStakingTransaction(
     value: amount
   });
 
-  // Add data embed output if present
-  if (scripts.dataEmbedScript) {
+  // Add provably note output if present
+  if (scripts.provablyNoteScript) {
     psbt.addOutput({
-      script: scripts.dataEmbedScript,
+      script: scripts.provablyNoteScript,
       value: 0
     });
   }
@@ -933,13 +933,33 @@ export function continueTimelockStakingTransaction(
   }
 }
 
+/**
+ * Creates a PSBT transaction to continue unbonded staking.
+ *
+ * @param {Object} scripts - Scripts for different stages of the transaction.
+ * @param {Buffer} scripts.timelockScript - Script to lock the transaction by height.
+ * @param {Buffer} scripts.slashingScript - Script for slashing.
+ * @param {Buffer} scripts.unbondingScript - Script for unbonding.
+ * @param {Buffer} [scripts.provablyNoteScript] - Optional script for storing provably data.
+ * @param {Transaction} stakingTx - The original transaction to continue staking.
+ * @param {number} transactionFee - the fee for current transaction.
+ * @param {networks.Network} network - The Bitcoin network to use (mainnet, testnet, etc.).
+ * @param {number} [outputIndex=0] - Index of the output to be spent.
+ * @param {number} [additionalAmount=0] - Additional amount to be added to the output.
+ * @param {string} changeAddress - Address for the change output.
+ * @param {UTXO[]} inputUTXOs - Array of UTXOs to be used as inputs.
+ * @param {number} feeRate - Fee rate in satoshis per byte.
+ * @param {Buffer} [publicKeyNoCoord] - Optional public key without coordinates.
+ * @param {number} [lockHeight] - Optional lock height for the transaction.
+ * @return {PsbtTransactionResult} - The result containing the PSBT transaction and additional data.
+ */
 export function continueUnbondingStakingTransaction(
   scripts: {
     unbondingScript: Buffer,
     unbondingTimelockScript: Buffer,
     timelockScript: Buffer,
     slashingScript: Buffer,
-    dataEmbedScript: Buffer,
+    provablyNoteScript: Buffer,
   },
   stakingTx: Transaction,
   transactionFee: number,
@@ -1018,7 +1038,7 @@ export function continueUnbondingStakingTransaction(
   const amount = stakingTx.outs[0].value - transactionFee + additionalAmount;
 
     /*
-  const numOutputs = scripts.dataEmbedScript ? 3 : 2;
+  const numOutputs = scripts.provablyNoteScript ? 3 : 2;
   const { selectedUTXOs, fee } = getStakingTxInputUTXOsAndFees(
     inputUTXOs, additionalAmount, feeRate, numOutputs
   );
@@ -1047,10 +1067,10 @@ export function continueUnbondingStakingTransaction(
     value: amount // amount
   });
 
-  if (scripts.dataEmbedScript) {
-    // Add the data embed output to the transaction
+  if (scripts.provablyNoteScript) {
+    // Add the data output to the transaction
     psbt.addOutput({
-      script: scripts.dataEmbedScript,
+      script: scripts.provablyNoteScript,
       value: 0
     });
   }
