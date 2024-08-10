@@ -1,5 +1,5 @@
 import { BIP32Interface } from "bip32";
-import * as ecc from "tiny-secp256k1";
+import * as ecc from "@bitcoin-js/tiny-secp256k1-asmjs";
 import { initEccLib, networks, Psbt, Transaction } from "bitcoinjs-lib";
 import * as locking from "../src/slashable/locking";
 import * as lockingScript from "../src/slashable/locking/script";
