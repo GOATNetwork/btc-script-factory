@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import { Psbt, Transaction, networks } from "bitcoinjs-lib";
 import { initBTCCurve } from "../utils/curve";
 import { buildDepositScript } from "./bridge.script";

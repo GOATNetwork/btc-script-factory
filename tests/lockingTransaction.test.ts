@@ -1,8 +1,8 @@
 // Import necessary libraries and functions
 import { networks, Transaction } from "bitcoinjs-lib";
-import { stakingTransaction, withdrawalTimeLockTransaction, withdrawalUnbondingTransaction } from "../src/covenantV1/staking";
+import { lockingTransaction, withdrawalTimeLockTransaction, withdrawalUnbondingTransaction } from "../src/covenantV1/locking";
 import WalletUtils from "./helper/walletUtils";
-import { buildStakingScript } from "../src/covenantV1/staking.script"; // Assuming this exists for fetching addresses and UTXOs
+import { buildLockingScript } from "../src/covenantV1/locking.script"; // Assuming this exists for fetching addresses and UTXOs
 
 // Set up a test network environment
 const regtest = networks.regtest;
@@ -22,7 +22,7 @@ const delegatorPubkeyBuffer = Buffer.from(delegatorKey, "hex");
 const validatorPubkeyBuffer = Buffer.from(validatorKey, "hex");
 
 // Common data for tests
-const stakingScript = buildStakingScript(
+const lockingScript = buildLockingScript(
   evmAddressBuffer,
   delegatorPubkeyBuffer,
   validatorPubkeyBuffer,
@@ -31,15 +31,15 @@ const stakingScript = buildStakingScript(
   nonce
 )
 
-describe("stakingTransaction", () => {
-  it("should create a valid staking transaction with valid inputs", async () => {
+describe("lockingTransaction", () => {
+  it("should create a valid locking transaction with valid inputs", async () => {
     const amount = 1e7; // Example amount in Satoshis
     const changeAddress = await walletUtils.getAddress();
     const inputUTXOs = await walletUtils.getUtxos(amount + 1e6);
     const feeRate = 10; // Satoshi per byte
 
-    const result = stakingTransaction(
-      { stakingScript },
+    const result = lockingTransaction(
+      { lockingScript },
       amount,
       changeAddress,
       inputUTXOs,
@@ -58,8 +58,8 @@ describe("stakingTransaction", () => {
     const inputUTXOs = await walletUtils.getUtxos(1e6);
     const feeRate = 0; // Invalid fee rate
 
-    expect(() => stakingTransaction(
-      { stakingScript },
+    expect(() => lockingTransaction(
+      { lockingScript },
       amount,
       changeAddress,
       inputUTXOs,
@@ -75,8 +75,8 @@ describe("stakingTransaction", () => {
     const feeRate = 10;
     const lockHeight = 400000; // Valid lock height
 
-    const result = stakingTransaction(
-      { stakingScript },
+    const result = lockingTransaction(
+      { lockingScript },
       amount,
       changeAddress,
       inputUTXOs,
@@ -95,8 +95,8 @@ describe("stakingTransaction", () => {
     const feeRate = 10;
     const invalidLockHeight = 500000001; // Above cutoff
 
-    expect(() => stakingTransaction(
-      { stakingScript },
+    expect(() => lockingTransaction(
+      { lockingScript },
       amount,
       changeAddress,
       inputUTXOs,
@@ -111,12 +111,12 @@ describe("withdrawalTimeLockTransaction", () => {
   it("should create a valid timelocked withdrawal transaction", async () => {
     const minimumFee = 1000; // Example fee in Satoshis
     const withdrawalAddress = await walletUtils.getAddress();
-    const mockStakingTransaction = new Transaction(); // Mock a transaction for testing
-    mockStakingTransaction.addOutput(Buffer.from(withdrawalAddress, "hex"), 1e7);
+    const mockLockingTransaction = new Transaction(); // Mock a transaction for testing
+    mockLockingTransaction.addOutput(Buffer.from(withdrawalAddress, "hex"), 1e7);
 
     const result = withdrawalTimeLockTransaction(
-      { stakingScript },
-      mockStakingTransaction,
+      { lockingScript },
+      mockLockingTransaction,
       withdrawalAddress,
       minimumFee,
       regtest
@@ -131,12 +131,12 @@ describe("withdrawalTimeLockTransaction", () => {
   it("should throw an error if the minimum fee is zero", async () => {
     const minimumFee = 0;
     const withdrawalAddress = await walletUtils.getAddress();
-    const mockStakingTransaction = new Transaction();
-    mockStakingTransaction.addOutput(Buffer.from(withdrawalAddress, "hex"), 1e7);
+    const mockLockingTransaction = new Transaction();
+    mockLockingTransaction.addOutput(Buffer.from(withdrawalAddress, "hex"), 1e7);
 
     expect(() => withdrawalTimeLockTransaction(
-      { stakingScript },
-      mockStakingTransaction,
+      { lockingScript },
+      mockLockingTransaction,
       withdrawalAddress,
       minimumFee,
       regtest
@@ -146,15 +146,15 @@ describe("withdrawalTimeLockTransaction", () => {
   it("should validate the timelock script", async () => {
     const minimumFee = 1000;
     const withdrawalAddress = await walletUtils.getAddress();
-    const mockStakingTransaction = new Transaction();
-    mockStakingTransaction.addOutput(Buffer.from(withdrawalAddress, "hex"), 1e7);
+    const mockLockingTransaction = new Transaction();
+    mockLockingTransaction.addOutput(Buffer.from(withdrawalAddress, "hex"), 1e7);
 
     // Provide an incorrect script for testing error handling
     const incorrectScript = Buffer.from("incorrect_script", "hex");
 
     expect(() => withdrawalTimeLockTransaction(
-      { stakingScript: incorrectScript },
-      mockStakingTransaction,
+      { lockingScript: incorrectScript },
+      mockLockingTransaction,
       withdrawalAddress,
       minimumFee,
       regtest
@@ -166,12 +166,12 @@ describe("withdrawalUnbondingTransaction", () => {
   it("should process an unbonding transaction correctly", async () => {
     const transactionFee = 1500; // Example transaction fee in Satoshis
     const withdrawalAddress = await walletUtils.getAddress();
-    const mockStakingTransaction = new Transaction();
-    mockStakingTransaction.addOutput(Buffer.from(withdrawalAddress, "hex"), 2e7);
+    const mockLockingTransaction = new Transaction();
+    mockLockingTransaction.addOutput(Buffer.from(withdrawalAddress, "hex"), 2e7);
 
     const result = withdrawalUnbondingTransaction(
-      { stakingScript },
-      mockStakingTransaction,
+      { lockingScript },
+      mockLockingTransaction,
       withdrawalAddress,
       transactionFee,
       regtest
@@ -184,12 +184,12 @@ describe("withdrawalUnbondingTransaction", () => {
   it("should throw an error if transaction fee is zero", async () => {
     const transactionFee = 0;
     const withdrawalAddress = await walletUtils.getAddress();
-    const mockStakingTransaction = new Transaction();
-    mockStakingTransaction.addOutput(Buffer.from(withdrawalAddress, "hex"), 1e7);
+    const mockLockingTransaction = new Transaction();
+    mockLockingTransaction.addOutput(Buffer.from(withdrawalAddress, "hex"), 1e7);
 
     expect(() => withdrawalUnbondingTransaction(
-      { stakingScript },
-      mockStakingTransaction,
+      { lockingScript },
+      mockLockingTransaction,
       withdrawalAddress,
       transactionFee,
       regtest
@@ -199,15 +199,15 @@ describe("withdrawalUnbondingTransaction", () => {
   it("should throw an error for an invalid output index", async () => {
     const transactionFee = 1000;
     const withdrawalAddress = await walletUtils.getAddress();
-    const mockStakingTransaction = new Transaction();
-    mockStakingTransaction.addOutput(Buffer.from(withdrawalAddress, "hex"), 1e7);
+    const mockLockingTransaction = new Transaction();
+    mockLockingTransaction.addOutput(Buffer.from(withdrawalAddress, "hex"), 1e7);
 
     // Provide an invalid output index
     const invalidOutputIndex = -1;
 
     expect(() => withdrawalUnbondingTransaction(
-      { stakingScript },
-      mockStakingTransaction,
+      { lockingScript },
+      mockLockingTransaction,
       withdrawalAddress,
       transactionFee,
       regtest,

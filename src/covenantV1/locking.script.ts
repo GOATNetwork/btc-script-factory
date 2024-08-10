@@ -12,7 +12,7 @@ const bip68 = require("bip68");
  * @param {Buffer} nonce - Nonce value for the transaction.
  * @return {Buffer}
  */
-export function buildStakingScript(
+export function buildLockingScript(
   evmAddress: Buffer,
   delegatorKey: Buffer,
   validatorKey: Buffer,

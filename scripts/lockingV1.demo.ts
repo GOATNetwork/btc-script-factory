@@ -3,29 +3,29 @@ import * as ecc from "tiny-secp256k1";
 import { initEccLib, networks, opcodes, payments, Psbt, script as bitcoinScript, Transaction } from "bitcoinjs-lib";
 import { BitcoinCoreWallet } from "walletprovider-ts/lib/providers/bitcoin_core_wallet";
 import { mnemonicArray, deriveKey, buildDefaultBitcoinCoreWallet } from "./wallet.setting"
-import { buildStakingScript } from "../src/covenantV1/staking.script";
-import { stakingTransaction, withdrawalTimeLockTransaction, withdrawalUnbondingTransaction } from "../src/covenantV1/staking";
+import { buildLockingScript } from "../src/covenantV1/locking.script";
+import { lockingTransaction, withdrawalTimeLockTransaction, withdrawalUnbondingTransaction } from "../src/covenantV1/locking";
 import { PsbtInput } from "bip174/src/lib/interfaces";
 import { witnessStackToScriptWitness } from "bitcoinjs-lib/src/psbt/psbtutils";
 const network = networks.regtest;
 
 initEccLib(ecc);
 
-const STAKING_TIMELOCK = 60;
+const LOCKING_TIMELOCK = 60;
 
 async function initAccount(numCovenants: number): Promise<BIP32Interface[]> {
   let accounts = new Array(numCovenants);
-  // staker, covenants...covenants+numConv
+  // lockr, covenants...covenants+numConv
   for (let i = 0; i < accounts.length; i++) {
     accounts[i] = await deriveKey(mnemonicArray[i], network);
   }
   return accounts;
 }
 
-class StakingProtocol {
+class LockingProtocol {
   covenants: any[]
   wallet: BitcoinCoreWallet
-  stakingTx: Transaction
+  lockingTx: Transaction
   unbondingTx: Transaction
   scripts: any
   // delegatorKey: string;
@@ -37,8 +37,8 @@ class StakingProtocol {
 
   constructor(covenants: any[]) {
     this.covenants = covenants;
-    this.wallet = buildDefaultBitcoinCoreWallet(); // staker
-    this.stakingTx = new Transaction;
+    this.wallet = buildDefaultBitcoinCoreWallet(); // lockr
+    this.lockingTx = new Transaction;
     this.unbondingTx = new Transaction;
     this.scripts = null;
     // this.delegatorKey = "9261bdf7033ba64b2e0a9941ace9923b168c6a182ce37aa35fd16c0076d6aa19";
@@ -50,23 +50,23 @@ class StakingProtocol {
     this.nonce = Buffer.from("537d5579", "hex");
   }
 
-  async getStakerPk() {
+  async getLockrPk() {
     await this.wallet.walletPassphrase("btcstaker", 1000);
 
-    let stakerAddress = await this.wallet.getAddress();
-    let pubKey = await this.wallet.getPublicKey(stakerAddress);
-    let stakerPk = Buffer.from(pubKey, "hex").subarray(0, 33);
-    return stakerPk;
+    let lockrAddress = await this.wallet.getAddress();
+    let pubKey = await this.wallet.getPublicKey(lockrAddress);
+    let lockrPk = Buffer.from(pubKey, "hex").subarray(0, 33);
+    return lockrPk;
   }
 
-  async staking() {
-    console.log("staking");
+  async locking() {
+    console.log("locking");
     const lockHeight = 5;
     console.log("lockHeight: ", lockHeight);
-    // const stakerPk = await this.getStakerPk();
+    // const lockrPk = await this.getLockrPk();
     const keyPair = await this.wallet.dumpPrivKey();
 
-    const stakingScript = buildStakingScript(
+    const lockingScript = buildLockingScript(
       this.ownerEvmAddress.startsWith("0x") ?
         Buffer.from(this.ownerEvmAddress.slice(2), "hex") :
         Buffer.from(this.ownerEvmAddress, "hex"),
@@ -77,7 +77,7 @@ class StakingProtocol {
       this.nonce
     );
 
-    this.scripts = { stakingScript };
+    this.scripts = { lockingScript };
 
     const amount = 1e6; // 0.01 BTC
     const feeRate = 15;
@@ -85,7 +85,7 @@ class StakingProtocol {
     const inputUTXOs = await this.wallet.getUtxos(changeAddress, amount + 5e7);
     console.log("inputUTXOs: ", inputUTXOs.length)
 
-    const { psbt } = stakingTransaction(
+    const { psbt } = lockingTransaction(
       this.scripts,
       amount,
       changeAddress,
@@ -95,11 +95,11 @@ class StakingProtocol {
       lockHeight
     )
 
-    const signedStakingPsbtHex = await this.wallet.signPsbt(psbt.toHex());
+    const signedLockingPsbtHex = await this.wallet.signPsbt(psbt.toHex());
 
-    const signedStakingPsbt = Psbt.fromHex(signedStakingPsbtHex);
+    const signedLockingPsbt = Psbt.fromHex(signedLockingPsbtHex);
 
-    const txHex = signedStakingPsbt.extractTransaction().toHex();
+    const txHex = signedLockingPsbt.extractTransaction().toHex();
 
     console.log(`txHex: ${txHex}`);
 
@@ -109,7 +109,7 @@ class StakingProtocol {
 
     console.log(`txid: ${receipt}`)
 
-    this.stakingTx = Transaction.fromHex(txHex);
+    this.lockingTx = Transaction.fromHex(txHex);
   }
 
   async withdrawTimelock() {
@@ -122,16 +122,16 @@ class StakingProtocol {
 
     const { psbt } = withdrawalTimeLockTransaction(
       this.scripts,
-      this.stakingTx,
+      this.lockingTx,
       withdrawalAddress,
       minimumFee,
       network,
       outputIndex
     );
 
-    const stakerKeyPair = await this.wallet.dumpPrivKey();
+    const lockrKeyPair = await this.wallet.dumpPrivKey();
 
-    psbt.signInput(0, stakerKeyPair);
+    psbt.signInput(0, lockrKeyPair);
 
     psbt.finalizeInput(0, (
       inputIndex: number,
@@ -175,7 +175,7 @@ class StakingProtocol {
 
     const { psbt } = withdrawalUnbondingTransaction(
       this.scripts,
-      this.stakingTx,
+      this.lockingTx,
       withdrawalAddress,
       transactionFee,
       network,
@@ -187,9 +187,9 @@ class StakingProtocol {
       this.nonce
     ])
 
-    const stakerKeyPair = await this.wallet.dumpPrivKey();
+    const lockrKeyPair = await this.wallet.dumpPrivKey();
 
-    psbt.signInput(0, stakerKeyPair);
+    psbt.signInput(0, lockrKeyPair);
     psbt.signInput(0, this.validator);
 
 
@@ -198,11 +198,11 @@ class StakingProtocol {
       input: PsbtInput,
       script: Buffer) => {
       console.log("Partial Signatures:");
-      console.log(`\tStaker: ${input.partialSig![0].signature.toString("hex")}`);
+      console.log(`\tLockr: ${input.partialSig![0].signature.toString("hex")}`);
       console.log(`\tValidator: ${input.partialSig![1].signature.toString("hex")}`);
 
       console.log("Public Keys:");
-      console.log(`\tStaker: ${input.partialSig![0].pubkey.toString("hex")}`);
+      console.log(`\tLockr: ${input.partialSig![0].pubkey.toString("hex")}`);
       console.log(`\tValidator: ${input.partialSig![1].pubkey.toString("hex")}`);
 
       const payment = payments.p2wsh({
@@ -236,12 +236,12 @@ class StakingProtocol {
 
   async check_balance() {
     console.log("Wallet balance: ", await this.wallet.getBalance());
-    // console.log("Staker balance: ", await this.wallet.getUtxos(await this.wallet.getAddress()));
+    // console.log("Lockr balance: ", await this.wallet.getUtxos(await this.wallet.getAddress()));
   }
 
   async mine(bn: number, addr: string) {
     await this.wallet.mine(bn, addr);
-    // console.log("Staker balance: ", await this.wallet.getUtxos(await this.wallet.getAddress()));
+    // console.log("Lockr balance: ", await this.wallet.getUtxos(await this.wallet.getAddress()));
   }
 
   async fuel() {
@@ -272,35 +272,35 @@ async function run() {
   let accounts = await initAccount(5);
 
   accounts.forEach((account: any) => console.log(account.publicKey.toString("hex")))
-  let stakingProtocol = new StakingProtocol(accounts);
+  let lockingProtocol = new LockingProtocol(accounts);
 
-  await stakingProtocol.check_balance();
-  // send token to staker
-  // await stakingProtocol.fuel(await getAddress(stakingProtocol.covenants[0]));
-  // await stakingProtocol.fuel(await getAddress(stakingProtocol.covenants[1]));
-  // await stakingProtocol.fuel(await getAddress(stakingProtocol.covenants[2]));
+  await lockingProtocol.check_balance();
+  // send token to lockr
+  // await lockingProtocol.fuel(await getAddress(lockingProtocol.covenants[0]));
+  // await lockingProtocol.fuel(await getAddress(lockingProtocol.covenants[1]));
+  // await lockingProtocol.fuel(await getAddress(lockingProtocol.covenants[2]));
 
-  await stakingProtocol.check_balance();
+  await lockingProtocol.check_balance();
 
-  await stakingProtocol.wallet.walletPassphrase("btcstaker", 1000);
+  await lockingProtocol.wallet.walletPassphrase("btcstaker", 1000);
 
 
   // withdraw timelock
   {
-    await stakingProtocol.mine(STAKING_TIMELOCK, await stakingProtocol.wallet.getAddress());
-    await stakingProtocol.check_balance();
-    await stakingProtocol.staking();
-    await stakingProtocol.check_balance();
-    await stakingProtocol.withdrawTimelock();
+    await lockingProtocol.mine(LOCKING_TIMELOCK, await lockingProtocol.wallet.getAddress());
+    await lockingProtocol.check_balance();
+    await lockingProtocol.locking();
+    await lockingProtocol.check_balance();
+    await lockingProtocol.withdrawTimelock();
   }
 
   // withdraw early
   {
-    await stakingProtocol.mine(STAKING_TIMELOCK, await stakingProtocol.wallet.getAddress());
-    await stakingProtocol.check_balance();
-    await stakingProtocol.staking();
-    await stakingProtocol.check_balance();
-    await stakingProtocol.withdrawEarly();
+    await lockingProtocol.mine(LOCKING_TIMELOCK, await lockingProtocol.wallet.getAddress());
+    await lockingProtocol.check_balance();
+    await lockingProtocol.locking();
+    await lockingProtocol.check_balance();
+    await lockingProtocol.withdrawEarly();
   }
 }
 
