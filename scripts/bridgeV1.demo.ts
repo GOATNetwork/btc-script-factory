@@ -1,5 +1,5 @@
 import BIP32Factory from "bip32";
-import * as ecc from "tiny-secp256k1";
+import * as ecc from "@bitcoin-js/tiny-secp256k1-asmjs";
 import { initEccLib, networks, Psbt, Transaction } from "bitcoinjs-lib";
 import { BitcoinCoreWallet } from "walletprovider-ts/lib/providers/bitcoin_core_wallet";
 import { buildDefaultBitcoinCoreWallet } from "./wallet.setting"
@@ -88,7 +88,7 @@ class DepositProtocol {
     console.log("ethAddress", ethAddress);
 
     const changeAddress = await this.wallet.getAddress();
-    console.log('changeAddress: ', changeAddress);
+    console.log("changeAddress: ", changeAddress);
     const inputUTXOs = await this.wallet.getUtxos(changeAddress, lockingAmount + 5e7);
     const feeRate = 1000;
 

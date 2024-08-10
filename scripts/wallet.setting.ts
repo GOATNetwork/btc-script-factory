@@ -1,7 +1,7 @@
 import { BitcoinCoreWallet } from "walletprovider-ts/lib/providers/bitcoin_core_wallet";
 
 import BIP32Factory from "bip32";
-import * as ecc from "tiny-secp256k1";
+import * as ecc from "@bitcoin-js/tiny-secp256k1-asmjs";
 const bip32 = BIP32Factory(ecc);
 const bip39 = require("bip39")
 

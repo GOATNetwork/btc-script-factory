@@ -1,4 +1,5 @@
-import * as ecc from "tiny-secp256k1";
+import * as ecc from "@bitcoin-js/tiny-secp256k1-asmjs";
+const secp256k1 = require("secp256k1");
 import { initEccLib, networks, Psbt, Transaction } from "bitcoinjs-lib";
 import * as bridge from "../src/slashable/bridge";
 import * as bridgeScript from "../src/slashable/bridge/script";
@@ -297,7 +298,6 @@ class DepositProtocol {
       // console.log("signPsbt");
       sendPsbt.psbt.signInput(0, keyPairs[0]);
       const validateSignature = (pubkey: Buffer, msghash: Buffer, signature: Buffer) => {
-        const secp256k1 = require("secp256k1");
         return secp256k1.ecdsaVerify(signature, msghash, pubkey);
       };
 
