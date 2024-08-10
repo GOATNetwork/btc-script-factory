@@ -1,6 +1,6 @@
 jest.setTimeout(60000);
 
-import * as ecc from "tiny-secp256k1";
+import * as ecc from "@bitcoin-js/tiny-secp256k1-asmjs";
 import { initEccLib, networks, Psbt, Transaction } from "bitcoinjs-lib";
 import { buildDepositScript } from "../../src/covenantV1/bridge.script";
 import { depositTransaction } from "../../src/covenantV1/bridge";
