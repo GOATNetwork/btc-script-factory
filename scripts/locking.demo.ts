@@ -1,8 +1,8 @@
 import { BIP32Interface } from "bip32";
 import * as ecc from "tiny-secp256k1";
 import { initEccLib, networks, Psbt, Transaction } from "bitcoinjs-lib";
-import * as staking from "../src/slashable/staking";
-import * as stakingScript from "../src/slashable/staking/script";
+import * as locking from "../src/slashable/locking";
+import * as lockingScript from "../src/slashable/locking/script";
 import { BitcoinCoreWallet } from "walletprovider-ts/lib/providers/bitcoin_core_wallet";
 import { mnemonicArray, deriveKey, buildDefaultBitcoinCoreWallet } from "./wallet.setting"
 
@@ -12,96 +12,96 @@ const network = networks.regtest;
 
 initEccLib(ecc);
 
-const STAKING_TIMELOCK = 20;
+const LOCKING_TIMELOCK = 20;
 const UNBONDING_TIMELOCK = 10;
 
 const lockingAmount = 5e7; // Satoshi
 async function initAccount(numCovenants: number): Promise<BIP32Interface[]> {
     let accounts = new Array(numCovenants);
-    // staker, covenants...covenants+numConv
+    // lockr, covenants...covenants+numConv
     for (let i = 0; i < accounts.length; i++) {
         accounts[i] = await deriveKey(mnemonicArray[i], network);
     }
     return accounts;
 }
 
-class StakingProtocol {
+class LockingProtocol {
     covenants: any[]
     wallet: BitcoinCoreWallet
-    stakingTx: Transaction
+    lockingTx: Transaction
     unbondingTx: Transaction
     scripts: any
 
     constructor(covenants: any[]) {
         this.covenants = covenants;
-        this.wallet = buildDefaultBitcoinCoreWallet(); // staker
-        this.stakingTx = new Transaction;
+        this.wallet = buildDefaultBitcoinCoreWallet(); // lockr
+        this.lockingTx = new Transaction;
         this.unbondingTx = new Transaction;
         this.scripts = null;
     }
 
-    async getStakerPk() {
-        let stakerAddress = await this.wallet.getAddress();
-        let pubKey = await this.wallet.getPublicKey(stakerAddress);
-        console.log("staker address", stakerAddress);
-        console.log("staker public key", pubKey);
-        let stakerPk = Buffer.from(pubKey, "hex").subarray(1, 33);
-        return stakerPk;
+    async getLockrPk() {
+        let lockrAddress = await this.wallet.getAddress();
+        let pubKey = await this.wallet.getPublicKey(lockrAddress);
+        console.log("lockr address", lockrAddress);
+        console.log("lockr public key", pubKey);
+        let lockrPk = Buffer.from(pubKey, "hex").subarray(1, 33);
+        return lockrPk;
     }
 
     async lock() {
-        let stakerPk = await this.getStakerPk();
-        let stakerAddress = await this.wallet.getAddress();
+        let lockrPk = await this.getLockrPk();
+        let lockrAddress = await this.wallet.getAddress();
 
         let covenantsPks = this.covenants.map((x: any) => {
             return Buffer.from(x.publicKey, "hex").subarray(1, 33);
         });
         // FIXME: n-of-n limited?
         let covenantThreshold = covenantsPks.length;
-        let scriptData = new stakingScript.StakingScriptData(
-            stakerPk,
+        let scriptData = new lockingScript.LockingScriptData(
+            lockrPk,
             covenantsPks,
             covenantThreshold,
-            STAKING_TIMELOCK,
+            LOCKING_TIMELOCK,
             UNBONDING_TIMELOCK,
             Buffer.from("676f6174", "hex") // goat
         );
         this.scripts = scriptData.buildScripts();
         let changeAddress = await this.wallet.getAddress();
-        let inputUTXOs = await this.wallet.getUtxos(stakerAddress, lockingAmount + 5e7);
-        console.log("Staker utxos", inputUTXOs);
+        let inputUTXOs = await this.wallet.getUtxos(lockrAddress, lockingAmount + 5e7);
+        console.log("Lockr utxos", inputUTXOs);
         let feeRate = 1000;
-        let publicKeyNoCoord = stakerPk;
+        let publicKeyNoCoord = lockrPk;
 
         let lockHeight = await this.wallet.getBTCTipHeight() + 10;
 
-        let { psbt } = staking.stakingTransaction(this.scripts, lockingAmount, changeAddress, inputUTXOs, network, feeRate, publicKeyNoCoord, lockHeight);
+        let { psbt } = locking.lockingTransaction(this.scripts, lockingAmount, changeAddress, inputUTXOs, network, feeRate, publicKeyNoCoord, lockHeight);
 
         console.log("psbt base64:", psbt.toBase64())
 
         await this.wallet.walletPassphrase("btcstaker", 1000);
-        const signedStakingPsbtHex = await this.wallet.signPsbt(psbt.toHex());
-        console.log("walltet signPsbt", signedStakingPsbtHex);
-        let signedStakingPsbt = Psbt.fromHex(signedStakingPsbtHex);
+        const signedLockingPsbtHex = await this.wallet.signPsbt(psbt.toHex());
+        console.log("walltet signPsbt", signedLockingPsbtHex);
+        let signedLockingPsbt = Psbt.fromHex(signedLockingPsbtHex);
         console.log("signPsbtFromBase64");
 
-        // let receipt = await this.wallet.pushTx(stakingTx);
-        let txHex = signedStakingPsbt.extractTransaction().toHex();
+        // let receipt = await this.wallet.pushTx(lockingTx);
+        let txHex = signedLockingPsbt.extractTransaction().toHex();
         console.log("txHex: ", txHex);
 
         await this.mine(10, await this.wallet.getAddress());
 
         let receipt = await this.wallet.pushTx(txHex);
         console.log(`txid: ${receipt}`)
-        this.stakingTx = Transaction.fromHex(txHex);
+        this.lockingTx = Transaction.fromHex(txHex);
     }
 
-    // Get the staker signature from the unbonding transaction
-    getStakerSignature = (unbondingTx: Transaction): string => {
+    // Get the lockr signature from the unbonding transaction
+    getLockrSignature = (unbondingTx: Transaction): string => {
         try {
             return unbondingTx.ins[0].witness[0].toString("hex");
         } catch (error) {
-            throw new Error("Failed to get staker signature");
+            throw new Error("Failed to get lockr signature");
         }
     };
 
@@ -110,16 +110,16 @@ class StakingProtocol {
         console.log("Unbonding");
         let { fastestFee } = await this.wallet.getNetworkFees();
         console.log(`fastestFee ${fastestFee}`)
-        let stakingOutputIndex = 0;
+        let lockingOutputIndex = 0;
 
-        // TODO https://github.com/babylonchain/simple-staking/blob/dev/src/utils/delegations/signUnbondingTx.ts#L46
+        // TODO https://github.com/babylonchain/simple-locking/blob/dev/src/utils/delegations/signUnbondingTx.ts#L46
 
-        const unsignedUnbondingPsbt: { psbt: Psbt } = staking.unbondingTransaction(
+        const unsignedUnbondingPsbt: { psbt: Psbt } = locking.unbondingTransaction(
             this.scripts,
-            this.stakingTx,
+            this.lockingTx,
             fastestFee || 1000, // transactionFee,
             network,
-            stakingOutputIndex
+            lockingOutputIndex
         );
         console.log("signPsbt");
 
@@ -129,16 +129,16 @@ class StakingProtocol {
             this.covenants[1],
             this.covenants[2]
         ];
-        const signedStakingPsbtHex = await signPsbtFromBase64(unsignedUnbondingPsbt.psbt.toBase64(), keyPairs, true);
+        const signedLockingPsbtHex = await signPsbtFromBase64(unsignedUnbondingPsbt.psbt.toBase64(), keyPairs, true);
 
         // sign transaction by covenants
         this.check_balance();
-        let receipt = await this.wallet.pushTx(signedStakingPsbtHex);
+        let receipt = await this.wallet.pushTx(signedLockingPsbtHex);
         console.log(`txid: ${receipt}`)
         await this.mine(20, await this.wallet.getAddress());
         this.check_balance();
 
-        this.unbondingTx = Transaction.fromHex(signedStakingPsbtHex);
+        this.unbondingTx = Transaction.fromHex(signedLockingPsbtHex);
     }
 
     async withdrawEarlyUnbounded() {
@@ -147,14 +147,14 @@ class StakingProtocol {
         let withdrawalAddress = await this.wallet.getAddress();
         let { fastestFee } = await this.wallet.getNetworkFees();
         console.log(`fastestFee ${fastestFee}, withdrawalAddress ${withdrawalAddress}`)
-        let stakingOutputIndex = 0;
-        const unsignedWithdrawalPsbt: { psbt: Psbt, fee: number } = staking.withdrawEarlyUnbondedTransaction(
+        let lockingOutputIndex = 0;
+        const unsignedWithdrawalPsbt: { psbt: Psbt, fee: number } = locking.withdrawEarlyUnbondedTransaction(
             this.scripts,
             this.unbondingTx,
             withdrawalAddress,
             network,
             fastestFee || 1000, // feeRate,
-            stakingOutputIndex
+            lockingOutputIndex
         );
         console.log("signPsbt");
 
@@ -162,11 +162,11 @@ class StakingProtocol {
             await this.wallet.dumpPrivKey()
         ];
 
-        const signedStakingPsbtHex = await signPsbtFromBase64(unsignedWithdrawalPsbt.psbt.toBase64(), keyPairs, true);
+        const signedLockingPsbtHex = await signPsbtFromBase64(unsignedWithdrawalPsbt.psbt.toBase64(), keyPairs, true);
 
-        console.log("pushTx", signedStakingPsbtHex);
+        console.log("pushTx", signedLockingPsbtHex);
         this.check_balance();
-        let receipt = await this.wallet.pushTx(signedStakingPsbtHex);
+        let receipt = await this.wallet.pushTx(signedLockingPsbtHex);
         console.log("txid: ", receipt);
         await this.mine(20, await this.wallet.getAddress());
         this.check_balance();
@@ -178,23 +178,23 @@ class StakingProtocol {
         let withdrawalAddress = await this.wallet.getAddress();
         let { fastestFee } = await this.wallet.getNetworkFees();
         console.log(`fastestFee ${fastestFee}, withdrawalAddress ${withdrawalAddress}`)
-        let stakingOutputIndex = 0;
-        const unsignedWithdrawalPsbt: { psbt: Psbt, fee: number } = staking.withdrawTimelockUnbondedTransaction(
+        let lockingOutputIndex = 0;
+        const unsignedWithdrawalPsbt: { psbt: Psbt, fee: number } = locking.withdrawTimelockUnbondedTransaction(
             this.scripts,
-            this.stakingTx,
+            this.lockingTx,
             withdrawalAddress,
             network,
             fastestFee || 1000, // feeRate,
-            stakingOutputIndex
+            lockingOutputIndex
         );
         console.log("signPsbt");
 
         let keyPairs = [await this.wallet.dumpPrivKey()];
-        const signedStakingPsbtHex = await signPsbtFromBase64(unsignedWithdrawalPsbt.psbt.toBase64(), keyPairs, true);
+        const signedLockingPsbtHex = await signPsbtFromBase64(unsignedWithdrawalPsbt.psbt.toBase64(), keyPairs, true);
 
-        console.log("pushTx", signedStakingPsbtHex);
+        console.log("pushTx", signedLockingPsbtHex);
         this.check_balance();
-        let receipt = await this.wallet.pushTx(signedStakingPsbtHex);
+        let receipt = await this.wallet.pushTx(signedLockingPsbtHex);
         console.log("txid: ", receipt);
         await this.mine(20, await this.wallet.getAddress());
         this.check_balance();
@@ -205,18 +205,18 @@ class StakingProtocol {
         await mine(5, await this.wallet.getAddress());
         console.log("SlashEarly");
         let { fastestFee } = await this.wallet.getNetworkFees();
-        let stakingOutputIndex = 0;
+        let lockingOutputIndex = 0;
         let slashingAddress = "bcrt1q7gjfeaydr8edeupkw3encq8pksnalvnda5yakt";
         console.log(`fastestFee ${fastestFee}, withdrawalAddress ${slashingAddress}`)
         let slashingRate = 0.5;
-        const slashEarlyUnbondedPsbt: { psbt: Psbt } = staking.slashEarlyUnbondedTransaction(
+        const slashEarlyUnbondedPsbt: { psbt: Psbt } = locking.slashEarlyUnbondedTransaction(
             this.scripts,
-            this.stakingTx,
+            this.lockingTx,
             slashingAddress,
             slashingRate,
             fastestFee || 1000, // feeRate,
             network,
-            stakingOutputIndex,
+            lockingOutputIndex,
         );
         console.log("signPsbt");
 
@@ -226,11 +226,11 @@ class StakingProtocol {
             this.covenants[1],
             this.covenants[2],
         ];
-        const signedStakingPsbtHex = await this.wallet.signPsbtFromBase64(slashEarlyUnbondedPsbt.psbt.toBase64(), keyPairs, true);
+        const signedLockingPsbtHex = await this.wallet.signPsbtFromBase64(slashEarlyUnbondedPsbt.psbt.toBase64(), keyPairs, true);
 
-        console.log("pushTx", signedStakingPsbtHex);
+        console.log("pushTx", signedLockingPsbtHex);
         this.check_balance();
-        let receipt = await this.wallet.pushTx(signedStakingPsbtHex);
+        let receipt = await this.wallet.pushTx(signedLockingPsbtHex);
         await mine(20, await this.wallet.getAddress());
         this.check_balance();
     }
@@ -240,20 +240,20 @@ class StakingProtocol {
         await this.mine(20, await this.wallet.getAddress());
         console.log("Slashing");
         let { fastestFee } = await this.wallet.getNetworkFees();
-        let stakingOutputIndex = 0;
+        let lockingOutputIndex = 0;
         let slashingAddress = "bcrt1q7gjfeaydr8edeupkw3encq8pksnalvnda5yakt";
         console.log(`fastestFee ${fastestFee}, slashing address ${slashingAddress}`)
         let slashingRate = 0.5;
-        const slashTimelockUnbondedPsbt: { psbt: Psbt } = staking.slashTimelockUnbondedTransaction(
+        const slashTimelockUnbondedPsbt: { psbt: Psbt } = locking.slashTimelockUnbondedTransaction(
             this.scripts,
-            this.stakingTx,
+            this.lockingTx,
             slashingAddress,
             slashingRate,
             fastestFee || 1000, // feeRate,
             network,
-            stakingOutputIndex
+            lockingOutputIndex
         );
-        console.log("init account, staker", await this.wallet.getAddress());
+        console.log("init account, lockr", await this.wallet.getAddress());
 
         let keyPairs = [
             await this.wallet.dumpPrivKey(),
@@ -262,11 +262,11 @@ class StakingProtocol {
             this.covenants[2]
         ];
         console.log("signPsbt");
-        const signedStakingPsbtHex = await signPsbtFromBase64(slashTimelockUnbondedPsbt.psbt.toBase64(), keyPairs, true);
+        const signedLockingPsbtHex = await signPsbtFromBase64(slashTimelockUnbondedPsbt.psbt.toBase64(), keyPairs, true);
 
-        console.log("pushTx", signedStakingPsbtHex);
+        console.log("pushTx", signedLockingPsbtHex);
         this.check_balance();
-        let receipt = await this.wallet.pushTx(signedStakingPsbtHex);
+        let receipt = await this.wallet.pushTx(signedLockingPsbtHex);
         console.log("txid: ", receipt);
         await this.mine(20, await this.wallet.getAddress());
         this.check_balance();
@@ -278,18 +278,18 @@ class StakingProtocol {
    await mine(5, await this.wallet.getAddress());
    console.log("SlashEarly");
    let { fastestFee } = await this.wallet.getNetworkFees();
-   let stakingOutputIndex = 0;
+   let lockingOutputIndex = 0;
    let slashingAddress = "bcrt1q7gjfeaydr8edeupkw3encq8pksnalvnda5yakt";
    console.log(`fastestFee ${fastestFee}, withdrawalAddress ${slashingAddress}`)
    let slashingRate = 0.5;
-   const slashEarlyUnbondedPsbt: { psbt: Psbt } = staking.slashEarlyUnbondedTransaction(
+   const slashEarlyUnbondedPsbt: { psbt: Psbt } = locking.slashEarlyUnbondedTransaction(
    this.scripts,
-   this.stakingTx,
+   this.lockingTx,
    slashingAddress,
    slashingRate,
    fastestFee || 1000, // feeRate,
    network,
-   stakingOutputIndex,
+   lockingOutputIndex,
    );
    console.log("signPsbt");
 
@@ -299,28 +299,28 @@ class StakingProtocol {
    this.covenants[1],
    this.covenants[2],
    ];
-   const signedStakingPsbtHex = await this.wallet.signPsbtFromBase64(slashEarlyUnbondedPsbt.psbt.toBase64(), keyPairs, true);
+   const signedLockingPsbtHex = await this.wallet.signPsbtFromBase64(slashEarlyUnbondedPsbt.psbt.toBase64(), keyPairs, true);
 
-   console.log("pushTx", signedStakingPsbtHex);
+   console.log("pushTx", signedLockingPsbtHex);
    this.check_balance();
-   let receipt = await this.wallet.pushTx(signedStakingPsbtHex);
+   let receipt = await this.wallet.pushTx(signedLockingPsbtHex);
    await mine(20, await this.wallet.getAddress());
    this.check_balance();
    }
      */
 
     async continue() {
-        console.log("Starting the staking continuation process.");
+        console.log("Starting the locking continuation process.");
         await this.mine(20, await this.wallet.getAddress());
         console.log("Mining completed.");
-        let stakerPk = await this.getStakerPk();
-        let stakerAddress = await this.wallet.getAddress();
+        let lockrPk = await this.getLockrPk();
+        let lockrAddress = await this.wallet.getAddress();
 
         console.log("Fetching inputs for transaction.");
-        let publicKeyNoCoord = stakerPk;
-        console.log(`Staker Public Key No Coordinate: ${publicKeyNoCoord.toString("hex")}`);
+        let publicKeyNoCoord = lockrPk;
+        console.log(`Lockr Public Key No Coordinate: ${publicKeyNoCoord.toString("hex")}`);
 
-        let inputUTXOs = await this.wallet.getUtxos(stakerAddress);
+        let inputUTXOs = await this.wallet.getUtxos(lockrAddress);
         // console.log(`Input UTXOs: ${JSON.stringify(inputUTXOs)}`);
 
         let lockHeight = await this.wallet.getBTCTipHeight() + 10;
@@ -333,9 +333,9 @@ class StakingProtocol {
         console.log(`Retrieved network fee: ${fastestFee || 1000}`);
 
         console.log("Preparing to build the PSBT.");
-        const { psbt, fee } = staking.continueTimelockStakingTransaction(
+        const { psbt, fee } = locking.continueTimelockLockingTransaction(
             this.scripts,
-            this.stakingTx,
+            this.lockingTx,
             network,
             fastestFee || 1000, // feeRate,
             0,
@@ -348,7 +348,7 @@ class StakingProtocol {
         console.log(`PSBT prepared with fee: ${fee}, input count: ${psbt.inputCount}`);
 
         console.log("Attempting to sign the PSBT.");
-        let keyPairs = [await this.wallet.dumpPrivKey(stakerAddress)];
+        let keyPairs = [await this.wallet.dumpPrivKey(lockrAddress)];
         console.log(`Using private key: ${keyPairs[0].toWIF()}`); // Show the private key in WIF format
 
         psbt.data.inputs.forEach((input, index) => {
@@ -365,31 +365,31 @@ class StakingProtocol {
         psbt.signInput(0, keyPairs[0]);
         psbt.signInput(1, keyPairs[0]);
         psbt.finalizeAllInputs();
-        const signedStakingPsbtHex = psbt.extractTransaction().toHex();
+        const signedLockingPsbtHex = psbt.extractTransaction().toHex();
         console.log("PSBT signed and finalized.");
 
         console.log("Mining additional blocks before pushing transaction.");
         await this.mine(10, await this.wallet.getAddress());
 
         console.log("Pushing transaction to the network.");
-        let receipt = await this.wallet.pushTx(signedStakingPsbtHex);
+        let receipt = await this.wallet.pushTx(signedLockingPsbtHex);
         console.log(`Transaction pushed, txid: ${receipt}`);
 
-        this.stakingTx = Transaction.fromHex(signedStakingPsbtHex);
-        console.log("Updated local staking transaction record.");
+        this.lockingTx = Transaction.fromHex(signedLockingPsbtHex);
+        console.log("Updated local locking transaction record.");
     }
 
-    async continueUnbondingStaking() {
-        console.log("Starting the staking continuation process.");
+    async continueUnbondingLocking() {
+        console.log("Starting the locking continuation process.");
         await this.mine(20, await this.wallet.getAddress());
         console.log("Mining completed.");
 
         console.log("Fetching inputs for transaction.");
-        let publicKeyNoCoord = await this.getStakerPk();
-        let stakerAddress = await this.wallet.getAddress();
-        console.log(`Staker Public Key No Coordinate: ${publicKeyNoCoord.toString("hex")}`);
+        let publicKeyNoCoord = await this.getLockrPk();
+        let lockrAddress = await this.wallet.getAddress();
+        console.log(`Lockr Public Key No Coordinate: ${publicKeyNoCoord.toString("hex")}`);
 
-        let inputUTXOs = await this.wallet.getUtxos(stakerAddress);
+        let inputUTXOs = await this.wallet.getUtxos(lockrAddress);
         // console.log(`Input UTXOs: ${JSON.stringify(inputUTXOs)}`);
 
         let lockHeight = await this.wallet.getBTCTipHeight() + 10;
@@ -402,9 +402,9 @@ class StakingProtocol {
         console.log(`Retrieved network fee: ${fastestFee || 1000}`);
 
         console.log("Preparing to build the PSBT.");
-        const { psbt, fee } = staking.continueUnbondingStakingTransaction(
+        const { psbt, fee } = locking.continueUnbondingLockingTransaction(
             this.scripts,
-            this.stakingTx,
+            this.lockingTx,
             fastestFee || 1000, // feeRate,
             network,
             0,
@@ -447,31 +447,31 @@ class StakingProtocol {
 
 
         psbt.finalizeAllInputs();
-        const signedStakingPsbtHex = psbt.extractTransaction().toHex();
+        const signedLockingPsbtHex = psbt.extractTransaction().toHex();
         console.log("PSBT signed and finalized.");
         */
 
-        const signedStakingPsbtHex = await signPsbtFromBase64(psbt.toBase64(), keyPairs, true);
+        const signedLockingPsbtHex = await signPsbtFromBase64(psbt.toBase64(), keyPairs, true);
         console.log("mutiSign done")
         console.log("Mining additional blocks before pushing transaction.");
         await this.mine(10, await this.wallet.getAddress());
 
         console.log("Pushing transaction to the network.");
-        let receipt = await this.wallet.pushTx(signedStakingPsbtHex);
+        let receipt = await this.wallet.pushTx(signedLockingPsbtHex);
         console.log(`Transaction pushed, txid: ${receipt}`);
 
-        this.stakingTx = Transaction.fromHex(signedStakingPsbtHex);
-        console.log("Updated local staking transaction record.");
+        this.lockingTx = Transaction.fromHex(signedLockingPsbtHex);
+        console.log("Updated local locking transaction record.");
     }
 
     async check_balance() {
         console.log("Wallet balance: ", await this.wallet.getBalance());
-        // console.log("Staker balance: ", await this.wallet.getUtxos(await this.wallet.getAddress()));
+        // console.log("Lockr balance: ", await this.wallet.getUtxos(await this.wallet.getAddress()));
     }
 
     async mine(bn: number, addr: string) {
         await this.wallet.mine(bn, addr);
-        // console.log("Staker balance: ", await this.wallet.getUtxos(await this.wallet.getAddress()));
+        // console.log("Lockr balance: ", await this.wallet.getUtxos(await this.wallet.getAddress()));
     }
 
     async fuel() {
@@ -500,83 +500,83 @@ class StakingProtocol {
 
 async function run() {
     let accounts = await initAccount(3);
-    let stakingProtocol = new StakingProtocol(accounts);
+    let lockingProtocol = new LockingProtocol(accounts);
 
-    await stakingProtocol.check_balance();
-    // send token to staker
-    // await stakingProtocol.fuel(await getAddress(stakingProtocol.covenants[0]));
-    // await stakingProtocol.fuel(await getAddress(stakingProtocol.covenants[1]));
-    // await stakingProtocol.fuel(await getAddress(stakingProtocol.covenants[2]));
+    await lockingProtocol.check_balance();
+    // send token to lockr
+    // await lockingProtocol.fuel(await getAddress(lockingProtocol.covenants[0]));
+    // await lockingProtocol.fuel(await getAddress(lockingProtocol.covenants[1]));
+    // await lockingProtocol.fuel(await getAddress(lockingProtocol.covenants[2]));
 
-    await stakingProtocol.check_balance();
+    await lockingProtocol.check_balance();
 
     // withdraw timelock
     {
-      await stakingProtocol.mine(STAKING_TIMELOCK, await stakingProtocol.wallet.getAddress());
-      await stakingProtocol.check_balance();
-      await stakingProtocol.lock();
-      await stakingProtocol.check_balance();
-      await stakingProtocol.withdrawTimelock();
+      await lockingProtocol.mine(LOCKING_TIMELOCK, await lockingProtocol.wallet.getAddress());
+      await lockingProtocol.check_balance();
+      await lockingProtocol.lock();
+      await lockingProtocol.check_balance();
+      await lockingProtocol.withdrawTimelock();
     }
 
     // slash timelock
     {
-      await stakingProtocol.mine(STAKING_TIMELOCK, await stakingProtocol.wallet.getAddress());
-      await stakingProtocol.check_balance();
-      await stakingProtocol.lock();
-      await stakingProtocol.check_balance();
-      await stakingProtocol.slash();
+      await lockingProtocol.mine(LOCKING_TIMELOCK, await lockingProtocol.wallet.getAddress());
+      await lockingProtocol.check_balance();
+      await lockingProtocol.lock();
+      await lockingProtocol.check_balance();
+      await lockingProtocol.slash();
     }
 
     // // slash early, TBD
     // {
-    //    await mine(STAKING_TIMELOCK, await stakingProtocol.wallet.getAddress());
-    //    await stakingProtocol.check_balance();
-    //    await stakingProtocol.lock();
-    //    await stakingProtocol.check_balance();
-    //    await stakingProtocol.slashEarly();
+    //    await mine(LOCKING_TIMELOCK, await lockingProtocol.wallet.getAddress());
+    //    await lockingProtocol.check_balance();
+    //    await lockingProtocol.lock();
+    //    await lockingProtocol.check_balance();
+    //    await lockingProtocol.slashEarly();
     // }
 
     // withdraw early
     {
-      await stakingProtocol.mine(STAKING_TIMELOCK, await stakingProtocol.wallet.getAddress());
-      await stakingProtocol.check_balance();
-      await stakingProtocol.lock();
-      await stakingProtocol.check_balance();
+      await lockingProtocol.mine(LOCKING_TIMELOCK, await lockingProtocol.wallet.getAddress());
+      await lockingProtocol.check_balance();
+      await lockingProtocol.lock();
+      await lockingProtocol.check_balance();
       // unbonding transcation
-      await stakingProtocol.unbonding();
-      await stakingProtocol.withdrawEarlyUnbounded();
+      await lockingProtocol.unbonding();
+      await lockingProtocol.withdrawEarlyUnbounded();
     }
     //
     // // natively continue lock
     // {
-    //   await stakingProtocol.mine(STAKING_TIMELOCK, await stakingProtocol.wallet.getAddress());
-    //   await stakingProtocol.check_balance();
-    //   await stakingProtocol.lock();
-    //   await stakingProtocol.check_balance();
-    //   await stakingProtocol.unbonding();
-    //   await stakingProtocol.lock();
+    //   await lockingProtocol.mine(LOCKING_TIMELOCK, await lockingProtocol.wallet.getAddress());
+    //   await lockingProtocol.check_balance();
+    //   await lockingProtocol.lock();
+    //   await lockingProtocol.check_balance();
+    //   await lockingProtocol.unbonding();
+    //   await lockingProtocol.lock();
     // }
     //
-    // // continue Timelock Staking
+    // // continue Timelock Locking
     // {
-    //   await stakingProtocol.mine(STAKING_TIMELOCK, await stakingProtocol.wallet.getAddress());
-    //   await stakingProtocol.check_balance();
-    //   await stakingProtocol.lock();
-    //   await stakingProtocol.check_balance();
-    //   await stakingProtocol.continue();
-    //   await stakingProtocol.check_balance();
-    //   await stakingProtocol.withdrawTimelock()
+    //   await lockingProtocol.mine(LOCKING_TIMELOCK, await lockingProtocol.wallet.getAddress());
+    //   await lockingProtocol.check_balance();
+    //   await lockingProtocol.lock();
+    //   await lockingProtocol.check_balance();
+    //   await lockingProtocol.continue();
+    //   await lockingProtocol.check_balance();
+    //   await lockingProtocol.withdrawTimelock()
     // }
-    // continue Timelock Staking
+    // continue Timelock Locking
     {
-        await stakingProtocol.mine(STAKING_TIMELOCK, await stakingProtocol.wallet.getAddress());
-        await stakingProtocol.check_balance();
-        await stakingProtocol.lock();
-        await stakingProtocol.check_balance();
-        await stakingProtocol.continueUnbondingStaking()
-        await stakingProtocol.check_balance();
-        await stakingProtocol.withdrawTimelock();
+        await lockingProtocol.mine(LOCKING_TIMELOCK, await lockingProtocol.wallet.getAddress());
+        await lockingProtocol.check_balance();
+        await lockingProtocol.lock();
+        await lockingProtocol.check_balance();
+        await lockingProtocol.continueUnbondingLocking()
+        await lockingProtocol.check_balance();
+        await lockingProtocol.withdrawTimelock();
     }
 }
 

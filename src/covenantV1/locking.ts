@@ -6,20 +6,20 @@ import {
 } from "bitcoinjs-lib";
 
 import { initBTCCurve } from "../utils/curve";
-import { buildStakingScript } from "./staking.script";
+import { buildLockingScript } from "./locking.script";
 import { UTXO } from "../types/UTXO";
 import { inputValueSum, getTxInputUTXOsAndFees } from "../utils/fee";
 import { PsbtTransactionResult } from "../types/transaction";
 
-export { initBTCCurve, buildStakingScript };
+export { initBTCCurve, buildLockingScript };
 
 // https://bips.xyz/370
 const BTC_LOCKTIME_HEIGHT_TIME_CUTOFF = 500000000;
 const BTC_DUST_SAT = 546;
 
-export function stakingTransaction(
+export function lockingTransaction(
   scripts: {
-    stakingScript: Buffer,
+    lockingScript: Buffer,
   },
   amount: number,
   changeAddress: string,
@@ -41,7 +41,7 @@ export function stakingTransaction(
   const psbt = new Psbt({ network });
 
   const p2wsh = payments.p2wsh({
-    redeem: { output: scripts.stakingScript, network },
+    redeem: { output: scripts.lockingScript, network },
     network
   });
 
@@ -55,12 +55,12 @@ export function stakingTransaction(
         script: Buffer.from(input.scriptPubKey, "hex"),
         value: input.value
       },
-      redeemScript: scripts.stakingScript,
+      redeemScript: scripts.lockingScript,
       sequence: 0xfffffffd // Enable locktime by setting the sequence value to (RBF-able)
     });
   });
 
-  // Add the staking output to the transaction
+  // Add the locking output to the transaction
   psbt.addOutput({
     address: p2wsh.address!,
     value: amount
@@ -92,9 +92,9 @@ export function stakingTransaction(
 
 export function withdrawalTimeLockTransaction(
   scripts: {
-    stakingScript: Buffer,
+    lockingScript: Buffer,
   },
-  stakingTransaction: Transaction,
+  lockingTransaction: Transaction,
   withdrawalAddress: string,
   minimumFee: number,
   network: networks.Network,
@@ -104,7 +104,7 @@ export function withdrawalTimeLockTransaction(
     throw new Error("Minimum fee must be bigger than 0");
   }
 
-  const decompiled = script.decompile(scripts.stakingScript);
+  const decompiled = script.decompile(scripts.lockingScript);
 
   if (!decompiled) {
     throw new Error("Timelock script is not valid");
@@ -130,19 +130,19 @@ export function withdrawalTimeLockTransaction(
   const psbt = new Psbt({ network });
 
   psbt.addInput({
-    hash: stakingTransaction.getId(),
+    hash: lockingTransaction.getId(),
     index: outputIndex,
     witnessUtxo: {
-      value: stakingTransaction.outs[outputIndex].value,
-      script: stakingTransaction.outs[outputIndex].script
+      value: lockingTransaction.outs[outputIndex].value,
+      script: lockingTransaction.outs[outputIndex].script
     },
-    witnessScript: scripts.stakingScript, // Adding witnessScript here
+    witnessScript: scripts.lockingScript, // Adding witnessScript here
     sequence: timelock
   });
 
   psbt.addOutput({
     address: withdrawalAddress,
-    value: stakingTransaction.outs[outputIndex].value - minimumFee
+    value: lockingTransaction.outs[outputIndex].value - minimumFee
   });
 
   return { psbt };
@@ -150,9 +150,9 @@ export function withdrawalTimeLockTransaction(
 
 export function withdrawalUnbondingTransaction(
   scripts: {
-    stakingScript: Buffer,
+    lockingScript: Buffer,
   },
-  stakingTransaction: Transaction,
+  lockingTransaction: Transaction,
   withdrawalAddress: string,
   transactionFee: number,
   network: networks.Network,
@@ -171,18 +171,18 @@ export function withdrawalUnbondingTransaction(
   const psbt = new Psbt({ network });
 
   psbt.addInput({
-    hash: stakingTransaction.getId(),
+    hash: lockingTransaction.getId(),
     index: outputIndex,
     witnessUtxo: {
-      value: stakingTransaction.outs[outputIndex].value,
-      script: stakingTransaction.outs[outputIndex].script
+      value: lockingTransaction.outs[outputIndex].value,
+      script: lockingTransaction.outs[outputIndex].script
     },
-    witnessScript: scripts.stakingScript // Adding witnessScript here
+    witnessScript: scripts.lockingScript // Adding witnessScript here
   });
 
   psbt.addOutput({
     address: withdrawalAddress,
-    value: stakingTransaction.outs[outputIndex].value - transactionFee
+    value: lockingTransaction.outs[outputIndex].value - transactionFee
   });
 
   return { psbt };

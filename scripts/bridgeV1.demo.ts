@@ -1,23 +1,51 @@
+import BIP32Factory from "bip32";
 import * as ecc from "tiny-secp256k1";
 import { initEccLib, networks, Psbt, Transaction } from "bitcoinjs-lib";
 import { BitcoinCoreWallet } from "walletprovider-ts/lib/providers/bitcoin_core_wallet";
-import { mnemonicArray, deriveKey, buildDefaultBitcoinCoreWallet } from "./wallet.setting"
+import { buildDefaultBitcoinCoreWallet } from "./wallet.setting"
 import { buildDepositScript } from "../src/covenantV1/bridge.script";
 import { depositTransaction } from "../src/covenantV1/bridge";
 import { signPsbtFromBase64 } from "./signpsbt";
+
+const bip32 = BIP32Factory(ecc);
+// import * as assert from 'assert';
 const network = networks.regtest;
+
+const bip39 = require("bip39")
+// const rng = require("randombytes");
 
 initEccLib(ecc);
 
 const DEPOSIT_TIMELOCK = 20;
 const ethAddress = "0x1234567890abcdef1234567890abcdef12345678";
 
-const lockingAmount = 5e7; // Satoshi
+const mnemonicArray = [
+    "worth pottery emotion apology alone coast evil tortoise calm normal cotton how",
+    "worth pottery emotion apology alone coast evil tortoise calm normal cotton are",
+    "worth pottery emotion apology alone coast evil tortoise calm normal cotton you",
+    "worth pottery emotion apology alone coast evil tortoise calm normal cotton hello"
+];
+
+async function deriveKey(mnemonic: string) {
+    // Verify the above (Below is no different than other HD wallets)
+
+    // let mnemonic = "worth pottery emotion apology alone coast evil tortoise calm normal cotton exchange";
+    const seed = await bip39.mnemonicToSeed(mnemonic);
+
+    // const rootKey = bip32.fromSeed(rng(64), network);
+    const rootKey = bip32.fromSeed(seed, network);
+    // https://github.com/bitcoinjs/bip32/blob/master/test/index.js
+    // const path = `m/86'/0'/0'/0/0`; // Path to first child of receiving wallet on first account
+    const path = "m/84'/1'/0'/0/0";
+    return rootKey.derivePath(path);
+}
+
+const lockingAmount = 1e6; // Satoshi
 async function initAccount(numCovenants: number): Promise<any[]> {
     let accounts = new Array(numCovenants);
     // operator, covenants...covenants+numConv
     for (let i = 0; i < accounts.length; i++) {
-        accounts[i] = await deriveKey(mnemonicArray[i], network);
+        accounts[i] = await deriveKey(mnemonicArray[i]);
     }
     return accounts;
 }
@@ -60,7 +88,8 @@ class DepositProtocol {
     console.log("ethAddress", ethAddress);
 
     const changeAddress = await this.wallet.getAddress();
-    const inputUTXOs = await this.wallet.getUtxos(changeAddress);
+    console.log('changeAddress: ', changeAddress);
+    const inputUTXOs = await this.wallet.getUtxos(changeAddress, lockingAmount + 5e7);
     const feeRate = 1000;
 
     const { psbt, fee } = depositTransaction(

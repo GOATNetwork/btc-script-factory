@@ -1,3 +1,4 @@
+/// <reference types="node" />
 /**
  * Script to validate transactions for a specific owner under certain conditions.
  * @param {Buffer} evmAddress - The owner's EVM address.
@@ -8,4 +9,4 @@
  * @param {Buffer} nonce - Nonce value for the transaction.
  * @return {Buffer}
  */
-export declare function buildStakingScript(evmAddress: Buffer, delegatorKey: Buffer, validatorKey: Buffer, transferTimeLock: number, validatorIndex: Buffer, nonce: Buffer): Buffer;
+export declare function buildLockingScript(evmAddress: Buffer, delegatorKey: Buffer, validatorKey: Buffer, transferTimeLock: number, validatorIndex: Buffer, nonce: Buffer): Buffer;

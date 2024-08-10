@@ -46,7 +46,6 @@ export function depositTransaction(
         script: Buffer.from(input.scriptPubKey, "hex"),
         value: input.value
       },
-      redeemScript: scripts.depositScript,
       sequence: 0xfffffffd // Enable locktime by setting the sequence value to (RBF-able)
     });
   });

@@ -30,7 +30,7 @@ export declare const inputValueSum: (inputUTXOs: UTXO[]) => number;
  *
  * Inputs:
  * - availableUTXOs: All available UTXOs from the wallet.
- * - amount: Amount to stake.
+ * - amount: Amount to lock.
  * - feeRate: Fee rate for the transaction in satoshis per byte.
  * - numOfOutputs: Number of outputs in the transaction.
  *
@@ -39,7 +39,7 @@ export declare const inputValueSum: (inputUTXOs: UTXO[]) => number;
  * - fee: The total fee amount for the transaction.
  *
  * @param {UTXO[]} availableUTXOs - All available UTXOs from the wallet.
- * @param {number} amount - The amount to stake.
+ * @param {number} amount - The amount to lock.
  * @param {number} feeRate - The fee rate in satoshis per byte.
  * @param {number} numOfOutputs - The number of outputs in the transaction.
  * @return {PsbtTransactionResult} An object containing the selected UTXOs and the fee.

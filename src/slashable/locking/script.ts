@@ -1,23 +1,23 @@
 import { script, opcodes } from "bitcoinjs-lib";
 
-import { StakingScripts } from "../../types/StakingScripts";
+import { LockingScripts } from "../../types/LockingScripts";
 
 // PK_LENGTH denotes the length of a public key in bytes
 export const PK_LENGTH = 32;
 
-// StakingScriptData is a class that holds the data required for the BTC Staking Script
+// LockingScriptData is a class that holds the data required for the BTC Locking Script
 // and exposes methods for converting it into useful formats
-export class StakingScriptData {
-  #stakerKey: Buffer;
+export class LockingScriptData {
+  #lockrKey: Buffer;
   #covenantKeys: Buffer[];
   #covenantThreshold: number;
-  #stakingTimeLock: number;
+  #lockingTimeLock: number;
   #unbondingTimeLock: number;
   #magicBytes: Buffer;
 
   constructor(
-    // The `stakerKey` is the public key of the staker without the coordinate bytes.
-    stakerKey: Buffer,
+    // The `lockrKey` is the public key of the lockr without the coordinate bytes.
+    lockrKey: Buffer,
     // A list of the public keys without the coordinate bytes corresponding to
     // the covenant emulators.
     // This is a parameter of the goat system and should be retrieved from there.
@@ -26,31 +26,31 @@ export class StakingScriptData {
     // to be valid.
     // This is a parameter of the goat system and should be retrieved from there.
     covenantThreshold: number,
-    // The staking period denoted as a number of BTC blocks.
-    stakingTimelock: number,
+    // The locking period denoted as a number of BTC blocks.
+    lockingTimelock: number,
     // The unbonding period denoted as a number of BTC blocks.
     // This value should be more than equal than the minimum unbonding time of the
     // goat system.
     unbondingTimelock: number,
-    // The magic bytes used to identify the staking transaction on goat
+    // The magic bytes used to identify the locking transaction on goat
     // through the data return script
     magicBytes: Buffer
   ) {
-    // Check that required input values are not missing when creating an instance of the StakingScriptData class
+    // Check that required input values are not missing when creating an instance of the LockingScriptData class
     if (
-      !stakerKey ||
+      !lockrKey ||
       !covenantKeys ||
       !covenantThreshold ||
-      !stakingTimelock ||
+      !lockingTimelock ||
       !unbondingTimelock ||
       !magicBytes
     ) {
       throw new Error("Missing required input values");
     }
-    this.#stakerKey = stakerKey;
+    this.#lockrKey = lockrKey;
     this.#covenantKeys = covenantKeys;
     this.#covenantThreshold = covenantThreshold;
-    this.#stakingTimeLock = stakingTimelock;
+    this.#lockingTimeLock = lockingTimelock;
     this.#unbondingTimeLock = unbondingTimelock;
     this.#magicBytes = magicBytes;
 
@@ -61,12 +61,12 @@ export class StakingScriptData {
   }
 
   /**
-   * Validates the staking script.
-   * @return {boolean} Returns true if the staking script is valid, otherwise false.
+   * Validates the locking script.
+   * @return {boolean} Returns true if the locking script is valid, otherwise false.
    */
   validate(): boolean {
-    // check that staker key is the correct length
-    if (this.#stakerKey.length != PK_LENGTH) {
+    // check that lockr key is the correct length
+    if (this.#lockrKey.length != PK_LENGTH) {
       return false;
     }
     // check that covenant keys are the correct length
@@ -75,8 +75,8 @@ export class StakingScriptData {
     ) {
       return false;
     }
-    // check that maximum value for staking time is not greater than uint16
-    if (this.#stakingTimeLock > 65535) {
+    // check that maximum value for locking time is not greater than uint16
+    if (this.#lockingTimeLock > 65535) {
       return false;
     }
     return true;
@@ -89,7 +89,7 @@ export class StakingScriptData {
    */
   buildTimelockScript(timelock: number): Buffer {
     return script.compile([
-      this.#stakerKey,
+      this.#lockrKey,
       opcodes.OP_CHECKSIGVERIFY,
       script.number.encode(timelock),
       opcodes.OP_CHECKSEQUENCEVERIFY
@@ -97,23 +97,23 @@ export class StakingScriptData {
   }
 
   /**
-   * Builds the staking timelock script.
+   * Builds the locking timelock script.
    * Only holder of private key for given pubKey can spend after relative lock time
    * Creates the timelock script in the form:
-   *    <stakerPubKey>
+   *    <lockrPubKey>
    *    OP_CHECKSIGVERIFY
-   *    <stakingTimeBlocks>
+   *    <lockingTimeBlocks>
    *    OP_CHECKSEQUENCEVERIFY
-   * @return {Buffer} The staking timelock script.
+   * @return {Buffer} The locking timelock script.
    */
-  buildStakingTimelockScript(): Buffer {
-    return this.buildTimelockScript(this.#stakingTimeLock);
+  buildLockingTimelockScript(): Buffer {
+    return this.buildTimelockScript(this.#lockingTimeLock);
   }
 
   /**
    * Builds the unbonding timelock script.
    * Creates the unbonding timelock script in the form:
-   *    <stakerPubKey>
+   *    <lockrPubKey>
    *    OP_CHECKSIGVERIFY
    *    <unbondingTimeBlocks>
    *    OP_CHECKSEQUENCEVERIFY
@@ -125,14 +125,14 @@ export class StakingScriptData {
 
   /**
    * Builds the unbonding script in the form:
-   *    buildSingleKeyScript(stakerPk, true) ||
+   *    buildSingleKeyScript(lockrPk, true) ||
    *    buildMultiKeyScript(covenantPks, covenantThreshold, false)
    *    || means combining the scripts
    * @return {Buffer} The unbonding script.
    */
   buildUnbondingScript(): Buffer {
     return Buffer.concat([
-      this.#buildSingleKeyScript(this.#stakerKey, true),
+      this.#buildSingleKeyScript(this.#lockrKey, true),
       this.#buildMultiKeyScript(
         this.#covenantKeys,
         this.#covenantThreshold,
@@ -142,18 +142,18 @@ export class StakingScriptData {
   }
 
   /**
-   * Builds the slashing script for staking in the form:
-   *    buildSingleKeyScript(stakerPk, true) ||
+   * Builds the slashing script for locking in the form:
+   *    buildSingleKeyScript(lockrPk, true) ||
    *    buildMultiKeyScript(covenantPks, covenantThreshold, false)
    *    || means combining the scripts
    * The slashing script is a combination of single-key and multi-key scripts.
-   * The single-key script is used for staker key verification.
+   * The single-key script is used for lockr key verification.
    * The multi-key script is used for covenant key verification.
    * @return {Buffer} The slashing script as a Buffer.
    */
   buildSlashingScript(): Buffer {
     return Buffer.concat([
-      this.#buildSingleKeyScript(this.#stakerKey, true),
+      this.#buildSingleKeyScript(this.#lockrKey, true),
       this.#buildMultiKeyScript(
         this.#covenantKeys,
         this.#covenantThreshold,
@@ -164,36 +164,36 @@ export class StakingScriptData {
   }
 
   /**
-   * Builds a data script for staking in the form:
-   *    OP_RETURN || <serializedStakingData>
-   * where serializedStakingData is the concatenation of:
-   *    MagicBytes || Version || StakerPublicKey || StakingTimeLock
+   * Builds a data script for locking in the form:
+   *    OP_RETURN || <serializedLockingData>
+   * where serializedLockingData is the concatenation of:
+   *    MagicBytes || Version || LockrPublicKey || LockingTimeLock
    * @return {Buffer} The compiled provably note script.
    */
   buildProvablyNoteScript(): Buffer {
     // 1 byte for version
     const version = Buffer.alloc(1);
     version.writeUInt8(0);
-    // 2 bytes for staking time
-    const stakingTimeLock = Buffer.alloc(2);
+    // 2 bytes for locking time
+    const lockingTimeLock = Buffer.alloc(2);
     // big endian
-    stakingTimeLock.writeUInt16BE(this.#stakingTimeLock);
-    const serializedStakingData = Buffer.concat([
+    lockingTimeLock.writeUInt16BE(this.#lockingTimeLock);
+    const serializedLockingData = Buffer.concat([
       this.#magicBytes,
       version,
-      this.#stakerKey,
-      stakingTimeLock
+      this.#lockrKey,
+      lockingTimeLock
     ]);
-    return script.compile([opcodes.OP_RETURN, serializedStakingData]);
+    return script.compile([opcodes.OP_RETURN, serializedLockingData]);
   }
 
   /**
-   * Builds the staking scripts.
-   * @return {StakingScripts} The staking scripts.
+   * Builds the locking scripts.
+   * @return {LockingScripts} The locking scripts.
    */
-  buildScripts(): StakingScripts {
+  buildScripts(): LockingScripts {
     return {
-      timelockScript: this.buildStakingTimelockScript(),
+      timelockScript: this.buildLockingTimelockScript(),
       unbondingScript: this.buildUnbondingScript(),
       slashingScript: this.buildSlashingScript(),
       unbondingTimelockScript: this.buildUnbondingTimelockScript(),
