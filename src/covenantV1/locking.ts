@@ -55,7 +55,6 @@ export function lockingTransaction(
         script: Buffer.from(input.scriptPubKey, "hex"),
         value: input.value
       },
-      redeemScript: scripts.lockingScript,
       sequence: 0xfffffffd // Enable locktime by setting the sequence value to (RBF-able)
     });
   });
