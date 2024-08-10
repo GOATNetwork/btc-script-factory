@@ -88,7 +88,7 @@ class DepositProtocol {
     console.log("ethAddress", ethAddress);
 
     const changeAddress = await this.wallet.getAddress();
-    console.log('changeAddress: ', changeAddress);
+    console.log("changeAddress: ", changeAddress);
     const inputUTXOs = await this.wallet.getUtxos(changeAddress, lockingAmount + 5e7);
     const feeRate = 1000;
 
