@@ -8,7 +8,8 @@ export const PK_LENGTH = 32;
 // LockingScriptData is a class that holds the data required for the BTC Locking Script
 // and exposes methods for converting it into useful formats
 export class LockingScriptData {
-  #lockrKey: Buffer;
+  #lockerKey: Buffer;
+  #operatorKeys: Buffer[];
   #covenantKeys: Buffer[];
   #covenantThreshold: number;
   #lockingTimeLock: number;
@@ -16,10 +17,11 @@ export class LockingScriptData {
   #magicBytes: Buffer;
 
   constructor(
-    // The `lockrKey` is the public key of the lockr without the coordinate bytes.
-    lockrKey: Buffer,
-    // A list of the public keys without the coordinate bytes corresponding to
-    // the covenant emulators.
+    // The `lockerKey` is the public key of the locker without the coordinate bytes.
+    lockerKey: Buffer,
+    // A list of the public keys indicating the sequencer nodes
+    operatorKeys: Buffer[],
+    // A list of the public keys indicating the committee members.
     // This is a parameter of the goat system and should be retrieved from there.
     covenantKeys: Buffer[],
     // The number of covenant emulator signatures required for a transaction
@@ -38,7 +40,8 @@ export class LockingScriptData {
   ) {
     // Check that required input values are not missing when creating an instance of the LockingScriptData class
     if (
-      !lockrKey ||
+      !lockerKey ||
+      !operatorKeys ||
       !covenantKeys ||
       !covenantThreshold ||
       !lockingTimelock ||
@@ -47,7 +50,8 @@ export class LockingScriptData {
     ) {
       throw new Error("Missing required input values");
     }
-    this.#lockrKey = lockrKey;
+    this.#lockerKey = lockerKey;
+    this.#operatorKeys = operatorKeys;
     this.#covenantKeys = covenantKeys;
     this.#covenantThreshold = covenantThreshold;
     this.#lockingTimeLock = lockingTimelock;
@@ -65,8 +69,14 @@ export class LockingScriptData {
    * @return {boolean} Returns true if the locking script is valid, otherwise false.
    */
   validate(): boolean {
-    // check that lockr key is the correct length
-    if (this.#lockrKey.length != PK_LENGTH) {
+    // check that locker key is the correct length
+    if (this.#lockerKey.length != PK_LENGTH) {
+      return false;
+    }
+    // check that operator keys are the correct length
+    if (
+      this.#operatorKeys.some((operatorKey) => operatorKey.length != PK_LENGTH)
+    ) {
       return false;
     }
     // check that covenant keys are the correct length
@@ -75,10 +85,37 @@ export class LockingScriptData {
     ) {
       return false;
     }
-    // check that maximum value for locking time is not greater than uint16
-    if (this.#lockingTimeLock > 65535) {
+
+      // Check whether we have any duplicate keys
+    const allPks = [
+      this.#lockerKey,
+      ...this.#operatorKeys,
+      ...this.#covenantKeys
+    ];
+    const allPksSet = new Set(allPks);
+    if (allPks.length !== allPksSet.size) {
       return false;
     }
+
+    // check that the threshold is above 0 and less than or equal to
+    // the size of the covenant emulators set
+    if (
+      this.#covenantThreshold == 0 ||
+      this.#covenantThreshold > this.#covenantKeys.length
+    ) {
+      return false;
+    }
+
+    // check that maximum value for staking time is not greater than uint16 and above 0
+    if (this.#lockingTimeLock == 0 || this.#lockingTimeLock > 65535) {
+      return false;
+    }
+
+    // check that maximum value for unbonding time is not greater than uint16 and above 0
+    if (this.#unbondingTimeLock == 0 || this.#unbondingTimeLock > 65535) {
+      return false;
+    }
+
     return true;
   }
 
@@ -89,7 +126,7 @@ export class LockingScriptData {
    */
   buildTimelockScript(timelock: number): Buffer {
     return script.compile([
-      this.#lockrKey,
+      this.#lockerKey,
       opcodes.OP_CHECKSIGVERIFY,
       script.number.encode(timelock),
       opcodes.OP_CHECKSEQUENCEVERIFY
@@ -100,7 +137,7 @@ export class LockingScriptData {
    * Builds the locking timelock script.
    * Only holder of private key for given pubKey can spend after relative lock time
    * Creates the timelock script in the form:
-   *    <lockrPubKey>
+   *    <lockerPubKey>
    *    OP_CHECKSIGVERIFY
    *    <lockingTimeBlocks>
    *    OP_CHECKSEQUENCEVERIFY
@@ -113,7 +150,7 @@ export class LockingScriptData {
   /**
    * Builds the unbonding timelock script.
    * Creates the unbonding timelock script in the form:
-   *    <lockrPubKey>
+   *    <lockerPubKey>
    *    OP_CHECKSIGVERIFY
    *    <unbondingTimeBlocks>
    *    OP_CHECKSEQUENCEVERIFY
@@ -125,14 +162,14 @@ export class LockingScriptData {
 
   /**
    * Builds the unbonding script in the form:
-   *    buildSingleKeyScript(lockrPk, true) ||
+   *    buildSingleKeyScript(lockerPk, true) ||
    *    buildMultiKeyScript(covenantPks, covenantThreshold, false)
    *    || means combining the scripts
    * @return {Buffer} The unbonding script.
    */
   buildUnbondingScript(): Buffer {
     return Buffer.concat([
-      this.#buildSingleKeyScript(this.#lockrKey, true),
+      this.#buildSingleKeyScript(this.#lockerKey, true),
       this.#buildMultiKeyScript(
         this.#covenantKeys,
         this.#covenantThreshold,
@@ -143,17 +180,18 @@ export class LockingScriptData {
 
   /**
    * Builds the slashing script for locking in the form:
-   *    buildSingleKeyScript(lockrPk, true) ||
+   *    buildSingleKeyScript(lockerPk, true) ||
    *    buildMultiKeyScript(covenantPks, covenantThreshold, false)
    *    || means combining the scripts
    * The slashing script is a combination of single-key and multi-key scripts.
-   * The single-key script is used for lockr key verification.
+   * The single-key script is used for locker key verification.
    * The multi-key script is used for covenant key verification.
    * @return {Buffer} The slashing script as a Buffer.
    */
   buildSlashingScript(): Buffer {
     return Buffer.concat([
-      this.#buildSingleKeyScript(this.#lockrKey, true),
+      this.#buildSingleKeyScript(this.#lockerKey, true),
+      this.#buildMultiKeyScript(this.#operatorKeys, 1, true),
       this.#buildMultiKeyScript(
         this.#covenantKeys,
         this.#covenantThreshold,
@@ -167,7 +205,7 @@ export class LockingScriptData {
    * Builds a data script for locking in the form:
    *    OP_RETURN || <serializedLockingData>
    * where serializedLockingData is the concatenation of:
-   *    MagicBytes || Version || LockrPublicKey || LockingTimeLock
+   *    MagicBytes || Version || lockerPublicKey || LockingTimeLock
    * @return {Buffer} The compiled provably note script.
    */
   buildProvablyNoteScript(): Buffer {
@@ -181,7 +219,8 @@ export class LockingScriptData {
     const serializedLockingData = Buffer.concat([
       this.#magicBytes,
       version,
-      this.#lockrKey,
+      this.#lockerKey,
+      this.#operatorKeys[0],
       lockingTimeLock
     ]);
     return script.compile([opcodes.OP_RETURN, serializedLockingData]);
