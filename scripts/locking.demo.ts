@@ -17,8 +17,8 @@ const UNBONDING_TIMELOCK = 10;
 
 const lockingAmount = 5e7; // Satoshi
 async function initAccount(numCovenants: number): Promise<BIP32Interface[]> {
-    let accounts = new Array(numCovenants);
-    // lockr, covenants...covenants+numConv
+    let accounts = new Array(numCovenants + 1);
+    // locker, operator, covenants...covenants+numConv
     for (let i = 0; i < accounts.length; i++) {
         accounts[i] = await deriveKey(mnemonicArray[i], network);
     }
@@ -27,31 +27,36 @@ async function initAccount(numCovenants: number): Promise<BIP32Interface[]> {
 
 class LockingProtocol {
     covenants: any[]
+    operators: any[]
     wallet: BitcoinCoreWallet
     lockingTx: Transaction
     unbondingTx: Transaction
     scripts: any
 
-    constructor(covenants: any[]) {
+    constructor(operators: any[], covenants: any[]) {
+        this.operators = operators;
         this.covenants = covenants;
-        this.wallet = buildDefaultBitcoinCoreWallet(); // lockr
+        this.wallet = buildDefaultBitcoinCoreWallet(); // locker
         this.lockingTx = new Transaction;
         this.unbondingTx = new Transaction;
         this.scripts = null;
     }
 
-    async getLockrPk() {
-        let lockrAddress = await this.wallet.getAddress();
-        let pubKey = await this.wallet.getPublicKey(lockrAddress);
-        console.log("lockr address", lockrAddress);
-        console.log("lockr public key", pubKey);
-        let lockrPk = Buffer.from(pubKey, "hex").subarray(1, 33);
-        return lockrPk;
+    async getlockerPk() {
+        let lockerAddress = await this.wallet.getAddress();
+        let pubKey = await this.wallet.getPublicKey(lockerAddress);
+        console.log("locker address", lockerAddress);
+        console.log("locker public key", pubKey);
+        let lockerPk = Buffer.from(pubKey, "hex").subarray(1, 33);
+        return lockerPk;
     }
 
     async lock() {
-        let lockrPk = await this.getLockrPk();
-        let lockrAddress = await this.wallet.getAddress();
+        let lockerPk = await this.getlockerPk();
+        let lockerAddress = await this.wallet.getAddress();
+        let operatorKeys = this.operators.map((x: any) => {
+            return Buffer.from(x.publicKey, "hex").subarray(1, 33);
+        });
 
         let covenantsPks = this.covenants.map((x: any) => {
             return Buffer.from(x.publicKey, "hex").subarray(1, 33);
@@ -59,7 +64,8 @@ class LockingProtocol {
         // FIXME: n-of-n limited?
         let covenantThreshold = covenantsPks.length;
         let scriptData = new lockingScript.LockingScriptData(
-            lockrPk,
+            lockerPk,
+            operatorKeys,
             covenantsPks,
             covenantThreshold,
             LOCKING_TIMELOCK,
@@ -68,10 +74,10 @@ class LockingProtocol {
         );
         this.scripts = scriptData.buildScripts();
         let changeAddress = await this.wallet.getAddress();
-        let inputUTXOs = await this.wallet.getUtxos(lockrAddress, lockingAmount + 5e7);
-        console.log("Lockr utxos", inputUTXOs);
+        let inputUTXOs = await this.wallet.getUtxos(lockerAddress, lockingAmount + 5e7);
+        console.log("locker utxos", inputUTXOs);
         let feeRate = 1000;
-        let publicKeyNoCoord = lockrPk;
+        let publicKeyNoCoord = lockerPk;
 
         let lockHeight = await this.wallet.getBTCTipHeight() + 10;
 
@@ -96,12 +102,12 @@ class LockingProtocol {
         this.lockingTx = Transaction.fromHex(txHex);
     }
 
-    // Get the lockr signature from the unbonding transaction
-    getLockrSignature = (unbondingTx: Transaction): string => {
+    // Get the locker signature from the unbonding transaction
+    getlockerSignature = (unbondingTx: Transaction): string => {
         try {
             return unbondingTx.ins[0].witness[0].toString("hex");
         } catch (error) {
-            throw new Error("Failed to get lockr signature");
+            throw new Error("Failed to get locker signature");
         }
     };
 
@@ -111,8 +117,6 @@ class LockingProtocol {
         let { fastestFee } = await this.wallet.getNetworkFees();
         console.log(`fastestFee ${fastestFee}`)
         let lockingOutputIndex = 0;
-
-        // TODO https://github.com/babylonchain/simple-locking/blob/dev/src/utils/delegations/signUnbondingTx.ts#L46
 
         const unsignedUnbondingPsbt: { psbt: Psbt } = locking.unbondingTransaction(
             this.scripts,
@@ -253,10 +257,11 @@ class LockingProtocol {
             network,
             lockingOutputIndex
         );
-        console.log("init account, lockr", await this.wallet.getAddress());
+        console.log("init account, locker", await this.wallet.getAddress());
 
         let keyPairs = [
             await this.wallet.dumpPrivKey(),
+            this.operators[0],
             this.covenants[0],
             this.covenants[1],
             this.covenants[2]
@@ -313,14 +318,14 @@ class LockingProtocol {
         console.log("Starting the locking continuation process.");
         await this.mine(20, await this.wallet.getAddress());
         console.log("Mining completed.");
-        let lockrPk = await this.getLockrPk();
-        let lockrAddress = await this.wallet.getAddress();
+        let lockerPk = await this.getlockerPk();
+        let lockerAddress = await this.wallet.getAddress();
 
         console.log("Fetching inputs for transaction.");
-        let publicKeyNoCoord = lockrPk;
-        console.log(`Lockr Public Key No Coordinate: ${publicKeyNoCoord.toString("hex")}`);
+        let publicKeyNoCoord = lockerPk;
+        console.log(`locker Public Key No Coordinate: ${publicKeyNoCoord.toString("hex")}`);
 
-        let inputUTXOs = await this.wallet.getUtxos(lockrAddress);
+        let inputUTXOs = await this.wallet.getUtxos(lockerAddress);
         // console.log(`Input UTXOs: ${JSON.stringify(inputUTXOs)}`);
 
         let lockHeight = await this.wallet.getBTCTipHeight() + 10;
@@ -348,7 +353,7 @@ class LockingProtocol {
         console.log(`PSBT prepared with fee: ${fee}, input count: ${psbt.inputCount}`);
 
         console.log("Attempting to sign the PSBT.");
-        let keyPairs = [await this.wallet.dumpPrivKey(lockrAddress)];
+        let keyPairs = [await this.wallet.dumpPrivKey(lockerAddress)];
         console.log(`Using private key: ${keyPairs[0].toWIF()}`); // Show the private key in WIF format
 
         psbt.data.inputs.forEach((input, index) => {
@@ -385,11 +390,11 @@ class LockingProtocol {
         console.log("Mining completed.");
 
         console.log("Fetching inputs for transaction.");
-        let publicKeyNoCoord = await this.getLockrPk();
-        let lockrAddress = await this.wallet.getAddress();
-        console.log(`Lockr Public Key No Coordinate: ${publicKeyNoCoord.toString("hex")}`);
+        let publicKeyNoCoord = await this.getlockerPk();
+        let lockerAddress = await this.wallet.getAddress();
+        console.log(`locker Public Key No Coordinate: ${publicKeyNoCoord.toString("hex")}`);
 
-        let inputUTXOs = await this.wallet.getUtxos(lockrAddress);
+        let inputUTXOs = await this.wallet.getUtxos(lockerAddress);
         // console.log(`Input UTXOs: ${JSON.stringify(inputUTXOs)}`);
 
         let lockHeight = await this.wallet.getBTCTipHeight() + 10;
@@ -466,12 +471,12 @@ class LockingProtocol {
 
     async check_balance() {
         console.log("Wallet balance: ", await this.wallet.getBalance());
-        // console.log("Lockr balance: ", await this.wallet.getUtxos(await this.wallet.getAddress()));
+        // console.log("locker balance: ", await this.wallet.getUtxos(await this.wallet.getAddress()));
     }
 
     async mine(bn: number, addr: string) {
         await this.wallet.mine(bn, addr);
-        // console.log("Lockr balance: ", await this.wallet.getUtxos(await this.wallet.getAddress()));
+        // console.log("locker balance: ", await this.wallet.getUtxos(await this.wallet.getAddress()));
     }
 
     async fuel() {
@@ -500,10 +505,14 @@ class LockingProtocol {
 
 async function run() {
     let accounts = await initAccount(3);
-    let lockingProtocol = new LockingProtocol(accounts);
+    let lockingProtocol = new LockingProtocol(
+        accounts.slice(0, 1),
+        accounts.slice(1)
+    );
 
     await lockingProtocol.check_balance();
-    // send token to lockr
+    // send token to locker
+    // await lockingProtocol.fuel(await getAddress(lockingProtocol.operators[0]));
     // await lockingProtocol.fuel(await getAddress(lockingProtocol.covenants[0]));
     // await lockingProtocol.fuel(await getAddress(lockingProtocol.covenants[1]));
     // await lockingProtocol.fuel(await getAddress(lockingProtocol.covenants[2]));
