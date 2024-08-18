@@ -1,6 +1,7 @@
 import { opcodes, script } from "bitcoinjs-lib";
 import { ETH_PK_LENGTH, PK_LENGTH } from "../constants";
-const bip68 = require("bip68");
+// @ts-ignore
+import bip68 from "bip68";
 
 /**
  * Script to validate transactions for a specific owner under certain conditions.
@@ -50,7 +51,7 @@ export function buildLockingScript(
     opcodes.OP_EQUAL,
     opcodes.OP_IF,
       opcodes.OP_DROP, // Drop the result of OP_EQUAL
-      script.number.encode(sequence),
+      script.number.encode(transferTimeLock),
       opcodes.OP_CHECKSEQUENCEVERIFY,
       opcodes.OP_DROP, // Drop the sequence number left by encode(sequence)
       delegatorKey,
