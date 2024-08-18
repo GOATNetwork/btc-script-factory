@@ -51,7 +51,7 @@ export function buildLockingScript(
     opcodes.OP_EQUAL,
     opcodes.OP_IF,
       opcodes.OP_DROP, // Drop the result of OP_EQUAL
-      script.number.encode(transferTimeLock),
+      script.number.encode(sequence),
       opcodes.OP_CHECKSEQUENCEVERIFY,
       opcodes.OP_DROP, // Drop the sequence number left by encode(sequence)
       delegatorKey,
