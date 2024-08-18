@@ -1,6 +1,7 @@
 import { opcodes, script } from "bitcoinjs-lib";
 import { ETH_PK_LENGTH, PK_LENGTH } from "../constants";
-const bip68 = require("bip68");
+// @ts-ignore
+import bip68 from "bip68";
 
 /**
  * Script to validate transactions for a specific owner under certain conditions.
