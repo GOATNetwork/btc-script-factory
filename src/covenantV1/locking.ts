@@ -5,17 +5,13 @@ import {
   networks, address, script
 } from "bitcoinjs-lib";
 
-import { initBTCCurve } from "../utils/curve";
 import { buildLockingScript } from "./locking.script";
 import { UTXO } from "../types/UTXO";
 import { inputValueSum, getTxInputUTXOsAndFees } from "../utils/fee";
 import { PsbtTransactionResult } from "../types/transaction";
+import { BTC_DUST_SAT, BTC_LOCKTIME_HEIGHT_TIME_CUTOFF } from "../constants";
 
-export { initBTCCurve, buildLockingScript };
-
-// https://bips.xyz/370
-const BTC_LOCKTIME_HEIGHT_TIME_CUTOFF = 500000000;
-const BTC_DUST_SAT = 546;
+export { buildLockingScript };
 
 export function lockingTransaction(
   scripts: {
@@ -45,7 +41,9 @@ export function lockingTransaction(
     network
   });
 
-  const { selectedUTXOs, fee } = getTxInputUTXOsAndFees(inputUTXOs, amount, feeRate, 2);
+  // Estimate fees with an assumed output count (initially 2 for recipient + change)
+  let estimatedOutputs = 2;
+  const { selectedUTXOs, fee } = getTxInputUTXOsAndFees(inputUTXOs, amount, feeRate, estimatedOutputs);
 
   selectedUTXOs.forEach((input) => {
     psbt.addInput({
@@ -65,15 +63,6 @@ export function lockingTransaction(
     value: amount
   });
 
-  const inputsSum = inputValueSum(selectedUTXOs);
-
-  if ((inputsSum - (amount + fee)) > BTC_DUST_SAT) {
-    psbt.addOutput({
-      address: changeAddress,
-      value: inputsSum - (amount + fee)
-    });
-  }
-
   // Set the locktime field if provided. If not provided, the locktime will be set to 0 by default
   // Only height based locktime is supported
   if (lockHeight) {
@@ -81,6 +70,25 @@ export function lockingTransaction(
       throw new Error("Invalid lock height");
     }
     psbt.setLocktime(lockHeight);
+  }
+
+  // Calculate the change
+  const inputsSum = inputValueSum(selectedUTXOs);
+  const change = inputsSum - (amount + fee);
+
+  // Dynamically decide whether to add a change output
+  if (change > BTC_DUST_SAT) {
+    psbt.addOutput({
+      address: changeAddress,
+      value: change
+    });
+  } else {
+    // Recalculate fee assuming no change output
+    const newFee = fee + change; // Increase the fee by the amount of dust
+    return {
+      psbt,
+      fee: newFee
+    };
   }
 
   return {
@@ -139,9 +147,19 @@ export function withdrawalTimeLockTransaction(
     sequence: timelock
   });
 
+  const outputValue = lockingTransaction.outs[outputIndex].value - minimumFee
+
+  if (outputValue < 0) {
+    throw new Error("Output value is smaller than minimum fee");
+  }
+
+  if (outputValue < BTC_DUST_SAT) {
+    throw new Error("Output value is smaller than dust");
+  }
+
   psbt.addOutput({
     address: withdrawalAddress,
-    value: lockingTransaction.outs[outputIndex].value - minimumFee
+    value: outputValue
   });
 
   return { psbt };
@@ -179,9 +197,19 @@ export function withdrawalUnbondingTransaction(
     witnessScript: scripts.lockingScript // Adding witnessScript here
   });
 
+  const outputValue = lockingTransaction.outs[outputIndex].value - transactionFee;
+
+  if (outputValue < 0) {
+    throw new Error("Output value is smaller than minimum fee");
+  }
+
+  if (outputValue < BTC_DUST_SAT) {
+    throw new Error("Output value is smaller than dust");
+  }
+
   psbt.addOutput({
     address: withdrawalAddress,
-    value: lockingTransaction.outs[outputIndex].value - transactionFee
+    value: outputValue
   });
 
   return { psbt };

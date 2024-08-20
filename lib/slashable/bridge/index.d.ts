@@ -1,9 +1,9 @@
+/// <reference types="node" />
 import { Psbt, Transaction, networks } from "bitcoinjs-lib";
-import { initBTCCurve } from "../../utils/curve";
 import { BridgeScriptData } from "./script";
 import { PsbtTransactionResult } from "../../types/transaction";
 import { UTXO } from "../../types/UTXO";
-export { initBTCCurve, BridgeScriptData };
+export { BridgeScriptData };
 export declare function depositTransaction(scripts: {
     timelockScript: Buffer;
     transferScript: Buffer;

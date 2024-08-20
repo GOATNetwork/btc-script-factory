@@ -5,15 +5,12 @@ import {
   networks
 } from "bitcoinjs-lib";
 
-import { initBTCCurve } from "../utils/curve";
 import { buildDepositScript } from "./bridge.script";
 import { UTXO } from "../types/UTXO";
 import { inputValueSum, getTxInputUTXOsAndFees } from "../utils/fee";
+import { BTC_DUST_SAT } from "../constants";
 
-export { initBTCCurve, buildDepositScript };
-
-// https://bips.xyz/370
-const BTC_DUST_SAT = 546;
+export { buildDepositScript };
 
 export function depositTransaction(
   scripts: {
@@ -24,7 +21,7 @@ export function depositTransaction(
   inputUTXOs: UTXO[],
   network: networks.Network,
   feeRate: number
-  ) {
+) {
   if (amount <= 0 || feeRate <= 0) {
     throw new Error("Amount and fee rate must be bigger than 0");
   }
@@ -36,7 +33,9 @@ export function depositTransaction(
     network
   });
 
-  const { selectedUTXOs, fee } = getTxInputUTXOsAndFees(inputUTXOs, amount, feeRate, 2);
+  // Estimate fees with an assumed output count (initially 2 for recipient + change)
+  let estimatedOutputs = 2;
+  const { selectedUTXOs, fee } = getTxInputUTXOsAndFees(inputUTXOs, amount, feeRate, estimatedOutputs);
 
   selectedUTXOs.forEach((input) => {
     psbt.addInput({
@@ -50,18 +49,29 @@ export function depositTransaction(
     });
   });
 
+  // Add output to the recipient
   psbt.addOutput({
     address: p2wsh.address!,
     value: amount
   });
 
+  // Calculate the change
   const inputsSum = inputValueSum(selectedUTXOs);
+  const change = inputsSum - (amount + fee);
 
-  if ((inputsSum - (amount + fee)) > BTC_DUST_SAT) {
+  // Dynamically decide whether to add a change output
+  if (change > BTC_DUST_SAT) {
     psbt.addOutput({
       address: changeAddress,
-      value: inputsSum - (amount + fee)
+      value: change
     });
+  } else {
+    // Recalculate fee assuming no change output
+    const newFee = fee + change; // Increase the fee by the amount of dust
+    return {
+      psbt,
+      fee: newFee
+    };
   }
 
   return {

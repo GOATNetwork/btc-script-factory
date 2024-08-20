@@ -1,10 +1,10 @@
+/// <reference types="node" />
 import { Psbt, Transaction, networks } from "bitcoinjs-lib";
-import { initBTCCurve } from "../../utils/curve";
 import { LockingScriptData } from "./script";
 import { PsbtTransactionResult } from "../../types/transaction";
 import { UTXO } from "../../types/UTXO";
 import { LockingScripts } from "../../types/LockingScripts";
-export { initBTCCurve, LockingScriptData };
+export { LockingScriptData };
 export { type UTXO, type LockingScripts };
 /**
  * Constructs an unsigned BTC Locking transaction in psbt format.

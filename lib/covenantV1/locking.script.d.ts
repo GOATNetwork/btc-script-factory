@@ -1,3 +1,4 @@
+/// <reference types="node" />
 /**
  * Script to validate transactions for a specific owner under certain conditions.
  * @param {Buffer} evmAddress - The owner's EVM address.

@@ -1,9 +1,9 @@
+/// <reference types="node" />
 import { Psbt, Transaction, networks } from "bitcoinjs-lib";
-import { initBTCCurve } from "../utils/curve";
 import { buildLockingScript } from "./locking.script";
 import { UTXO } from "../types/UTXO";
 import { PsbtTransactionResult } from "../types/transaction";
-export { initBTCCurve, buildLockingScript };
+export { buildLockingScript };
 export declare function lockingTransaction(scripts: {
     lockingScript: Buffer;
 }, amount: number, changeAddress: string, inputUTXOs: UTXO[], network: networks.Network, feeRate: number, lockHeight?: number): PsbtTransactionResult;
