@@ -24,7 +24,7 @@ export class LockingScriptData {
     // A list of the public keys indicating the committee members.
     // This is a parameter of the goat system and should be retrieved from there.
     covenantKeys: Buffer[],
-    // The number of covenant emulator signatures required for a transaction
+    // The number of covenant signatures required for a transaction
     // to be valid.
     // This is a parameter of the goat system and should be retrieved from there.
     covenantThreshold: number,
@@ -98,7 +98,7 @@ export class LockingScriptData {
     }
 
     // check that the threshold is above 0 and less than or equal to
-    // the size of the covenant emulators set
+    // the size of the covenant set
     if (
       this.#covenantThreshold == 0 ||
       this.#covenantThreshold > this.#covenantKeys.length
