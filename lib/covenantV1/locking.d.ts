@@ -9,11 +9,11 @@ export declare function lockingTransaction(scripts: {
 }, amount: number, changeAddress: string, inputUTXOs: UTXO[], network: networks.Network, feeRate: number, lockHeight?: number): PsbtTransactionResult;
 export declare function withdrawalTimeLockTransaction(scripts: {
     lockingScript: Buffer;
-}, lockingTransaction: Transaction, withdrawalAddress: string, minimumFee: number, network: networks.Network, outputIndex?: number): {
+}, lockingTransaction: Transaction, withdrawalAddress: string, feeRate: number, network: networks.Network, outputIndex?: number): {
     psbt: Psbt;
 };
 export declare function withdrawalUnbondingTransaction(scripts: {
     lockingScript: Buffer;
-}, lockingTransaction: Transaction, withdrawalAddress: string, transactionFee: number, network: networks.Network, outputIndex?: number): {
+}, lockingTransaction: Transaction, withdrawalAddress: string, feeRate: number, network: networks.Network, outputIndex?: number): {
     psbt: Psbt;
 };

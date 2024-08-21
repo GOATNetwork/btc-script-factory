@@ -98,7 +98,7 @@ export const getTxInputUTXOsAndFees = (
   }
 
   if (accumulatedValue < amount + estimatedFee) {
-    throw new Error("Insufficient funds: unable to gather enough UTXOs to cover the amount and fees.");
+    throw new Error("Insufficient funds: unable to gather enough UTXOs to cover the spend amount and fees");
   }
 
   return {

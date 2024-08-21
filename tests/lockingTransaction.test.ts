@@ -2,7 +2,8 @@
 import { networks, Transaction } from "bitcoinjs-lib";
 import { lockingTransaction, withdrawalTimeLockTransaction, withdrawalUnbondingTransaction } from "../src/covenantV1/locking";
 import WalletUtils from "./helper/walletUtils";
-import { buildLockingScript } from "../src/covenantV1/locking.script"; // Assuming this exists for fetching addresses and UTXOs
+import { buildLockingScript } from "../src/covenantV1/locking.script";
+import { getWithdrawTxFee } from "../src/utils/feeV1"; // Assuming this exists for fetching addresses and UTXOs
 
 // Set up a test network environment
 const regtest = networks.regtest;
@@ -109,7 +110,8 @@ describe("lockingTransaction", () => {
 
 describe("withdrawalTimeLockTransaction", () => {
   it("should create a valid timelocked withdrawal transaction", async () => {
-    const minimumFee = 1000; // Example fee in Satoshis
+    const feeRate = 15;
+    const outputIndex = 0;
     const withdrawalAddress = await walletUtils.getAddress();
     const mockLockingTransaction = new Transaction(); // Mock a transaction for testing
     mockLockingTransaction.addOutput(Buffer.from(withdrawalAddress, "hex"), 1e7);
@@ -118,18 +120,19 @@ describe("withdrawalTimeLockTransaction", () => {
       { lockingScript },
       mockLockingTransaction,
       withdrawalAddress,
-      minimumFee,
-      regtest
+      feeRate,
+      regtest,
+      outputIndex
     );
 
     expect(result.psbt).toBeDefined();
-    expect(result.psbt.txOutputs[0].value).toBe(1e7 - minimumFee);
+    expect(result.psbt.txOutputs[0].value).toBe(1e7 - getWithdrawTxFee(feeRate, mockLockingTransaction.outs[outputIndex].script));
     // Ensure sequence is set for timelock
     expect(result.psbt.txInputs[0].sequence).toBeGreaterThan(0);
   });
 
   it("should throw an error if the minimum fee is zero", async () => {
-    const minimumFee = 0;
+    const feeRate = 0;
     const withdrawalAddress = await walletUtils.getAddress();
     const mockLockingTransaction = new Transaction();
     mockLockingTransaction.addOutput(Buffer.from(withdrawalAddress, "hex"), 1e7);
@@ -138,13 +141,13 @@ describe("withdrawalTimeLockTransaction", () => {
       { lockingScript },
       mockLockingTransaction,
       withdrawalAddress,
-      minimumFee,
+      feeRate,
       regtest
-    )).toThrow("Minimum fee must be bigger than 0");
+    )).toThrow("fee rate must be bigger than 0");
   });
 
   it("should validate the timelock script", async () => {
-    const minimumFee = 1000;
+    const feeRate = 15;
     const withdrawalAddress = await walletUtils.getAddress();
     const mockLockingTransaction = new Transaction();
     mockLockingTransaction.addOutput(Buffer.from(withdrawalAddress, "hex"), 1e7);
@@ -156,7 +159,7 @@ describe("withdrawalTimeLockTransaction", () => {
       { lockingScript: incorrectScript },
       mockLockingTransaction,
       withdrawalAddress,
-      minimumFee,
+      feeRate,
       regtest
     )).toThrow("Timelock script is not valid");
   });
@@ -164,7 +167,8 @@ describe("withdrawalTimeLockTransaction", () => {
 
 describe("withdrawalUnbondingTransaction", () => {
   it("should process an unbonding transaction correctly", async () => {
-    const transactionFee = 1500; // Example transaction fee in Satoshis
+    const feeRate = 15;
+    const outputIndex = 0;
     const withdrawalAddress = await walletUtils.getAddress();
     const mockLockingTransaction = new Transaction();
     mockLockingTransaction.addOutput(Buffer.from(withdrawalAddress, "hex"), 2e7);
@@ -173,16 +177,17 @@ describe("withdrawalUnbondingTransaction", () => {
       { lockingScript },
       mockLockingTransaction,
       withdrawalAddress,
-      transactionFee,
-      regtest
+      feeRate,
+      regtest,
+      outputIndex
     );
 
     expect(result.psbt).toBeDefined();
-    expect(result.psbt.txOutputs[0].value).toBe(2e7 - transactionFee);
+    expect(result.psbt.txOutputs[0].value).toBe(2e7 - getWithdrawTxFee(feeRate, mockLockingTransaction.outs[outputIndex].script));
   });
 
   it("should throw an error if transaction fee is zero", async () => {
-    const transactionFee = 0;
+    const feeRate = 0;
     const withdrawalAddress = await walletUtils.getAddress();
     const mockLockingTransaction = new Transaction();
     mockLockingTransaction.addOutput(Buffer.from(withdrawalAddress, "hex"), 1e7);
@@ -191,13 +196,13 @@ describe("withdrawalUnbondingTransaction", () => {
       { lockingScript },
       mockLockingTransaction,
       withdrawalAddress,
-      transactionFee,
+      feeRate,
       regtest
-    )).toThrow("Unbonding fee must be bigger than 0");
+    )).toThrow("fee rate must be bigger than 0");
   });
 
   it("should throw an error for an invalid output index", async () => {
-    const transactionFee = 1000;
+    const feeRate = 15;
     const withdrawalAddress = await walletUtils.getAddress();
     const mockLockingTransaction = new Transaction();
     mockLockingTransaction.addOutput(Buffer.from(withdrawalAddress, "hex"), 1e7);
@@ -209,7 +214,7 @@ describe("withdrawalUnbondingTransaction", () => {
       { lockingScript },
       mockLockingTransaction,
       withdrawalAddress,
-      transactionFee,
+      feeRate,
       regtest,
       invalidOutputIndex
     )).toThrow("Output index must be bigger or equal to 0");

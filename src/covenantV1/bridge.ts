@@ -7,8 +7,9 @@ import {
 
 import { buildDepositScript } from "./bridge.script";
 import { UTXO } from "../types/UTXO";
-import { inputValueSum, getTxInputUTXOsAndFees } from "../utils/fee";
+import { inputValueSum } from "../utils/fee";
 import { BTC_DUST_SAT } from "../constants";
+import { getSpendTxInputUTXOsAndFees } from "../utils/feeV1";
 
 export { buildDepositScript };
 
@@ -33,9 +34,13 @@ export function depositTransaction(
     network
   });
 
-  // Estimate fees with an assumed output count (initially 2 for recipient + change)
-  let estimatedOutputs = 2;
-  const { selectedUTXOs, fee } = getTxInputUTXOsAndFees(inputUTXOs, amount, feeRate, estimatedOutputs);
+  const psbtOutputs = [
+    {
+      address: p2wsh.address!,
+      value: amount
+    }
+  ];
+  const { selectedUTXOs, fee } = getSpendTxInputUTXOsAndFees(network, inputUTXOs, amount, feeRate, psbtOutputs);
 
   selectedUTXOs.forEach((input) => {
     psbt.addInput({
@@ -49,11 +54,8 @@ export function depositTransaction(
     });
   });
 
-  // Add output to the recipient
-  psbt.addOutput({
-    address: p2wsh.address!,
-    value: amount
-  });
+  // Add outputs to the recipient
+  psbt.addOutputs(psbtOutputs);
 
   // Calculate the change
   const inputsSum = inputValueSum(selectedUTXOs);

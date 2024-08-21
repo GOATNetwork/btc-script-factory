@@ -7,9 +7,10 @@ import {
 
 import { buildLockingScript } from "./locking.script";
 import { UTXO } from "../types/UTXO";
-import { inputValueSum, getTxInputUTXOsAndFees } from "../utils/fee";
+import { inputValueSum } from "../utils/fee";
 import { PsbtTransactionResult } from "../types/transaction";
 import { BTC_DUST_SAT, BTC_LOCKTIME_HEIGHT_TIME_CUTOFF } from "../constants";
+import { getSpendTxInputUTXOsAndFees, getWithdrawTxFee } from "../utils/feeV1";
 
 export { buildLockingScript };
 
@@ -41,9 +42,13 @@ export function lockingTransaction(
     network
   });
 
-  // Estimate fees with an assumed output count (initially 2 for recipient + change)
-  let estimatedOutputs = 2;
-  const { selectedUTXOs, fee } = getTxInputUTXOsAndFees(inputUTXOs, amount, feeRate, estimatedOutputs);
+  const psbtOutputs = [
+    {
+      address: p2wsh.address!,
+      value: amount
+    }
+  ];
+  const { selectedUTXOs, fee } = getSpendTxInputUTXOsAndFees(network, inputUTXOs, amount, feeRate, psbtOutputs);
 
   selectedUTXOs.forEach((input) => {
     psbt.addInput({
@@ -58,10 +63,7 @@ export function lockingTransaction(
   });
 
   // Add the locking output to the transaction
-  psbt.addOutput({
-    address: p2wsh.address!,
-    value: amount
-  });
+  psbt.addOutputs(psbtOutputs);
 
   // Set the locktime field if provided. If not provided, the locktime will be set to 0 by default
   // Only height based locktime is supported
@@ -103,12 +105,12 @@ export function withdrawalTimeLockTransaction(
   },
   lockingTransaction: Transaction,
   withdrawalAddress: string,
-  minimumFee: number,
+  feeRate: number,
   network: networks.Network,
   outputIndex = 0
 ) {
-  if (minimumFee <= 0) {
-    throw new Error("Minimum fee must be bigger than 0");
+  if (feeRate <= 0) {
+    throw new Error("fee rate must be bigger than 0");
   }
 
   const decompiled = script.decompile(scripts.lockingScript);
@@ -147,7 +149,8 @@ export function withdrawalTimeLockTransaction(
     sequence: timelock
   });
 
-  const outputValue = lockingTransaction.outs[outputIndex].value - minimumFee
+  const estimatedFee = getWithdrawTxFee(feeRate, lockingTransaction.outs[outputIndex].script);
+  const outputValue = lockingTransaction.outs[outputIndex].value - estimatedFee
 
   if (outputValue < 0) {
     throw new Error("Output value is smaller than minimum fee");
@@ -171,13 +174,12 @@ export function withdrawalUnbondingTransaction(
   },
   lockingTransaction: Transaction,
   withdrawalAddress: string,
-  transactionFee: number,
+  feeRate: number,
   network: networks.Network,
   outputIndex: number = 0
 ) {
-  // Check that transaction fee is bigger than 0
-  if (transactionFee <= 0) {
-    throw new Error("Unbonding fee must be bigger than 0");
+  if (feeRate <= 0) {
+    throw new Error("fee rate must be bigger than 0");
   }
 
   // Check that outputIndex is bigger or equal to 0
@@ -197,7 +199,8 @@ export function withdrawalUnbondingTransaction(
     witnessScript: scripts.lockingScript // Adding witnessScript here
   });
 
-  const outputValue = lockingTransaction.outs[outputIndex].value - transactionFee;
+  const estimatedFee = getWithdrawTxFee(feeRate, lockingTransaction.outs[outputIndex].script);
+  const outputValue = lockingTransaction.outs[outputIndex].value - estimatedFee;
 
   if (outputValue < 0) {
     throw new Error("Output value is smaller than minimum fee");

@@ -106,7 +106,7 @@ export class LockingScriptData {
       return false;
     }
 
-    // check that maximum value for staking time is not greater than uint16 and above 0
+    // check that maximum value for locking time is not greater than uint16 and above 0
     if (this.#lockingTimeLock == 0 || this.#lockingTimeLock > 65535) {
       return false;
     }
