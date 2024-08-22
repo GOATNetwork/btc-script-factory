@@ -1,3 +1,4 @@
+/// <reference types="node" />
 export interface LockingScripts {
     timelockScript: Buffer;
     unbondingScript: Buffer;

@@ -9,19 +9,15 @@ import {
 import { Taptree } from "bitcoinjs-lib/src/types";
 
 import { internalPubkey } from "../../constants/internalPubkey";
-import { initBTCCurve } from "../../utils/curve";
 import { PK_LENGTH, LockingScriptData } from "./script";
 import { PsbtTransactionResult } from "../../types/transaction";
 import { UTXO } from "../../types/UTXO";
 import { LockingScripts } from "../../types/LockingScripts";
 import { getEstimatedFee, inputValueSum, getTxInputUTXOsAndFees } from "../../utils/fee";
+import { BTC_DUST_SAT, BTC_LOCKTIME_HEIGHT_TIME_CUTOFF } from "../../constants";
 
-export { initBTCCurve, LockingScriptData };
+export { LockingScriptData };
 export { type UTXO, type LockingScripts };
-
-// https://bips.xyz/370
-const BTC_LOCKTIME_HEIGHT_TIME_CUTOFF = 500000000;
-const BTC_DUST_SAT = 546;
 
 /**
  * Constructs an unsigned BTC Locking transaction in psbt format.
@@ -142,17 +138,6 @@ export function lockingTransaction(
     });
   }
 
-  // Add a change output only if there's any amount leftover from the inputs
-  const inputsSum = inputValueSum(selectedUTXOs);
-  // Check if the change amount is above the dust limit, and if so, add it as a change output
-  console.log(`${inputsSum} ${amount} ${fee}`);
-  if ((inputsSum - (amount + fee)) > BTC_DUST_SAT) {
-    psbt.addOutput({
-      address: changeAddress,
-      value: inputsSum - (amount + fee)
-    });
-  }
-
   // Set the locktime field if provided. If not provided, the locktime will be set to 0 by default
   // Only height based locktime is supported
   if (lockHeight) {
@@ -160,6 +145,25 @@ export function lockingTransaction(
       throw new Error("Invalid lock height");
     }
     psbt.setLocktime(lockHeight);
+  }
+
+  // Calculate the change
+  const inputsSum = inputValueSum(selectedUTXOs);
+  const change = inputsSum - (amount + fee);
+
+  // Dynamically decide whether to add a change output
+  if (change > BTC_DUST_SAT) {
+    psbt.addOutput({
+      address: changeAddress,
+      value: change
+    });
+  } else {
+    // Recalculate fee assuming no change output
+    const newFee = fee + change; // Increase the fee by the amount of dust
+    return {
+      psbt,
+      fee: newFee
+    };
   }
 
   return {
@@ -361,16 +365,22 @@ function withdrawalTransaction(
     sequence: timelock
   });
 
-  const outputValue = tx.outs[outputIndex].value;
-  if (outputValue < BTC_DUST_SAT) {
-    throw new Error("Output value is less than dust limit");
-  }
   // withdraw tx always has 1 output only
   const estimatedFee = getEstimatedFee(feeRate, psbt.txInputs.length, 1);
-  console.log(`estimatedFee ${estimatedFee}, value`, tx.outs[outputIndex].value);
+
+  const outputValue = tx.outs[outputIndex].value - estimatedFee;
+
+  if (outputValue < 0) {
+    throw new Error("Output value is smaller than minimum fee");
+  }
+
+  if (outputValue < BTC_DUST_SAT) {
+    throw new Error("Output value is smaller than dust");
+  }
+
   psbt.addOutput({
     address: withdrawalAddress,
-    value: tx.outs[outputIndex].value - estimatedFee
+    value: outputValue
   });
 
   return {

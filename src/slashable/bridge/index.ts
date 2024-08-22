@@ -9,17 +9,13 @@ import {
 import { Taptree } from "bitcoinjs-lib/src/types";
 
 import { internalPubkey } from "../../constants/internalPubkey";
-import { initBTCCurve } from "../../utils/curve";
 import { PK_LENGTH, BridgeScriptData } from "./script";
 import { PsbtTransactionResult } from "../../types/transaction";
 import { UTXO } from "../../types/UTXO";
 import { getEstimatedFee, inputValueSum, getTxInputUTXOsAndFees } from "../../utils/fee";
+import { BTC_DUST_SAT, BTC_LOCKTIME_HEIGHT_TIME_CUTOFF } from "../../constants";
 
-export { initBTCCurve, BridgeScriptData };
-
-// https://bips.xyz/370
-const BTC_LOCKTIME_HEIGHT_TIME_CUTOFF = 500000000;
-const BTC_DUST_SAT = 546;
+export { BridgeScriptData };
 
 export function depositTransaction(
   scripts: {
@@ -101,17 +97,6 @@ export function depositTransaction(
     });
   }
 
-  // Add a change output only if there's any amount leftover from the inputs
-  const inputsSum = inputValueSum(selectedUTXOs);
-  // Check if the change amount is above the dust limit, and if so, add it as a change output
-  // console.log(`${inputsSum} ${amount} ${fee}`);
-  if ((inputsSum - (amount + fee)) > BTC_DUST_SAT) {
-    psbt.addOutput({
-      address: changeAddress,
-      value: inputsSum - (amount + fee)
-    });
-  }
-
   // Set the locktime field if provided. If not provided, the locktime will be set to 0 by default
   // Only height based locktime is supported
   if (lockHeight) {
@@ -119,6 +104,25 @@ export function depositTransaction(
       throw new Error("Invalid lock height");
     }
     psbt.setLocktime(lockHeight);
+  }
+
+  // Calculate the change
+  const inputsSum = inputValueSum(selectedUTXOs);
+  const change = inputsSum - (amount + fee);
+
+  // Dynamically decide whether to add a change output
+  if (change > BTC_DUST_SAT) {
+    psbt.addOutput({
+      address: changeAddress,
+      value: change
+    });
+  } else {
+    // Recalculate fee assuming no change output
+    const newFee = fee + change; // Increase the fee by the amount of dust
+    return {
+      psbt,
+      fee: newFee
+    };
   }
 
   return {
@@ -378,18 +382,29 @@ export function depositP2SHTransaction(
     });
   }
 
+  // Calculate the change
   const inputsSum = inputValueSum(selectedUTXOs);
-  if ((inputsSum - (amount + fee)) > BTC_DUST_SAT) {
+  const change = inputsSum - (amount + fee);
+
+  // Dynamically decide whether to add a change output
+  if (change > BTC_DUST_SAT) {
     psbt.addOutput({
       address: changeAddress,
-      value: inputsSum - (amount + fee)
+      value: change
     });
+  } else {
+    // Recalculate fee assuming no change output
+    const newFee = fee + change; // Increase the fee by the amount of dust
+    return {
+      psbt,
+      fee: newFee
+    };
   }
 
   return {
     psbt,
     fee
-  };
+  }
 }
 
 export function sendP2SHTransaction(

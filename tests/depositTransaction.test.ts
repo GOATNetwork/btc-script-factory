@@ -1,10 +1,10 @@
 // Import necessary libraries
-import { networks } from "bitcoinjs-lib";
+import { networks, payments } from "bitcoinjs-lib";
 import { buildDepositScript, depositTransaction } from "../src/covenantV1/bridge";
 import WalletUtils from "./helper/walletUtils";
 import { PsbtTransactionResult } from "../src/types/transaction";
-import { getTxInputUTXOsAndFees } from "../src/utils/fee";
 import { inputValueSum } from "../src/utils/fee";
+import { getSpendTxInputUTXOsAndFees } from "../src/utils/feeV1";
 // Set the test timeout for long-running tests
 // jest.setTimeout(30000);
 
@@ -69,7 +69,17 @@ describe("depositTransaction", () => {
       feeRate
     );
 
-    const { fee: estimatedFee } = getTxInputUTXOsAndFees(inputUTXOs, amount, feeRate, 2);
+    const p2wsh = payments.p2wsh({
+      redeem: { output: depositScript, network },
+      network
+    });
+
+    const psbtOutputs = [{
+      address: p2wsh.address!,
+      value: amount
+    }]
+
+    const { fee: estimatedFee } = getSpendTxInputUTXOsAndFees(network, inputUTXOs, amount, feeRate, psbtOutputs);
 
     // Perform detailed validations
     validateCommonFields({ psbt, fee }, amount, estimatedFee, changeAddress);
@@ -88,7 +98,7 @@ describe("depositTransaction", () => {
       inputUTXOs,
       network,
       feeRate
-    )).toThrow("Insufficient funds: unable to gather enough UTXOs to cover the amount and fees.");
+    )).toThrow("Insufficient funds: unable to gather enough UTXOs to cover the spend amount and fees");
   });
 
   it("should throw an error if the transaction amount is zero or negative", async () => {

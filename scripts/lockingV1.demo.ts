@@ -117,14 +117,14 @@ class LockingProtocol {
     await this.mine(20, await this.wallet.getAddress());
 
     const withdrawalAddress = await this.wallet.getAddress();
-    const minimumFee = 1000;
+    const feeRate = 15;
     const outputIndex = 0;
 
     const { psbt } = withdrawalTimeLockTransaction(
       this.scripts,
       this.lockingTx,
       withdrawalAddress,
-      minimumFee,
+      feeRate,
       network,
       outputIndex
     );
@@ -170,14 +170,14 @@ class LockingProtocol {
     await this.mine(20, await this.wallet.getAddress());
 
     const withdrawalAddress = await this.wallet.getAddress();
-    const transactionFee = 1000;
+    const feeRate = 15;
     const outputIndex = 0;
 
     const { psbt } = withdrawalUnbondingTransaction(
       this.scripts,
       this.lockingTx,
       withdrawalAddress,
-      transactionFee,
+      feeRate,
       network,
       outputIndex
     );
