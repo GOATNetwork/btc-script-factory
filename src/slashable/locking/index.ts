@@ -90,7 +90,6 @@ export function lockingTransaction(
   const { selectedUTXOs, fee } = getTxInputUTXOsAndFees(
     inputUTXOs, amount, feeRate, numOutputs
   );
-  console.log("selectedUTXOs", selectedUTXOs);
 
   // Create a partially signed transaction
   const psbt = new Psbt({ network });
