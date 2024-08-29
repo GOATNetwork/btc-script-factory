@@ -15,9 +15,9 @@ export function buildDepositScript(evmAddress: Buffer, posPubkey: Buffer): Buffe
   if (evmAddress.length !== ETH_PK_LENGTH) {
     throw new Error("Invalid EVM address length");
   }
-  if (posPubkey.length !== PK_LENGTH) {
-    throw new Error("Invalid public key length");
-  }
+  // if (posPubkey.length !== PK_LENGTH) {
+  //   throw new Error("Invalid public key length");
+  // }
 
   return script.compile([
     evmAddress,
