@@ -2,7 +2,7 @@ import {
   payments,
   Psbt,
   Transaction,
-  networks, opcodes, script as btcScript
+  networks,
 } from "bitcoinjs-lib";
 
 import { buildDepositScript } from "./bridge.script";
@@ -12,85 +12,6 @@ import { BTC_DUST_SAT } from "../constants";
 import { getSpendTxInputUTXOsAndFees } from "../utils/feeV1";
 
 export { buildDepositScript };
-
-export function depositSendTransaction(
-  amount: number,
-  changeAddress: string,
-  transferAddress: string,
-  evmAddress: string,
-  opReturnData: string,
-  magicBytes: Buffer,
-  inputUTXOs: UTXO[],
-  network: networks.Network,
-  feeRate: number
-) {
-  if (amount <= 0 || feeRate <= 0) {
-    throw new Error("Amount and fee rate must be bigger than 0");
-  }
-
-  const psbt = new Psbt({ network });
-
-  const serializedStakingData = Buffer.concat([
-    magicBytes,
-    Buffer.from(evmAddress, "hex"),
-  ])
-
-  const psbtOutputs = [
-    {
-      address: transferAddress,
-      value: amount
-    },
-    {
-      script: btcScript.compile([
-        opcodes.OP_RETURN,
-        serializedStakingData
-      ]),
-      value: 0 // OP_RETURN output的值总是0
-    }
-  ];
-
-  const { selectedUTXOs, fee } = getSpendTxInputUTXOsAndFees(network, inputUTXOs, amount, feeRate, psbtOutputs);
-
-  selectedUTXOs.forEach((input) => {
-    psbt.addInput({
-      hash: input.txid,
-      index: input.vout,
-      witnessUtxo: {
-        script: Buffer.from(input.scriptPubKey, "hex"),
-        value: input.value
-      },
-      sequence: 0xfffffffd // Enable locktime by setting the sequence value to (RBF-able)
-    });
-  });
-
-  // Add outputs to the PSBT
-  psbt.addOutputs(psbtOutputs);
-
-  // Calculate the change
-  const inputsSum = inputValueSum(selectedUTXOs);
-  const change = inputsSum - (amount + fee);
-
-  // Dynamically decide whether to add a change output
-  if (change > BTC_DUST_SAT) {
-    psbt.addOutput({
-      address: changeAddress,
-      value: change
-    });
-  } else {
-    // Recalculate fee assuming no change output
-    const newFee = fee + change; // Increase the fee by the amount of dust
-    return {
-      psbt,
-      fee: newFee
-    };
-  }
-
-  return {
-    psbt,
-    fee
-  }
-}
-
 
 export function depositTransaction(
   scripts: {
@@ -120,7 +41,6 @@ export function depositTransaction(
     }
   ];
 
-  console.log("psbtOutputs: ", psbtOutputs)
   const { selectedUTXOs, fee } = getSpendTxInputUTXOsAndFees(network, inputUTXOs, amount, feeRate, psbtOutputs);
 
   selectedUTXOs.forEach((input) => {
@@ -162,6 +82,89 @@ export function depositTransaction(
     fee
   }
 }
+
+/**
+ * Creates a transaction to deposit funds to a fixed address with an optional data embedding script.
+ * @param {Object} scripts - Scripts used in the transaction.
+ * @param {Buffer} scripts.dataEmbedScript - The data embedding script.
+ * @param {number} amount - The amount of funds to deposit. Must be greater than 0.
+ * @param {string} fixedAddress - The fixed address to deposit funds to.
+ * @param {string} changeAddress - The address to send any change back to.
+ * @param {UTXO[]} inputUTXOs - Array of input UTXOs.
+ * @param {networks.Network} network - The network to use for the transaction.
+ * @param {number} feeRate - The fee rate for the transaction. Must be greater than 0.
+ * @return {Object} - An object containing the PSBT and the calculated fee.
+ */
+export function depositToFixedAddressTransaction(
+  scripts: {
+    dataEmbedScript: Buffer
+  },
+  amount: number,
+  fixedAddress: string,
+  changeAddress: string,
+  inputUTXOs: UTXO[],
+  network: networks.Network,
+  feeRate: number
+) {
+  if (amount <= 0 || feeRate <= 0) {
+    throw new Error("Amount and fee rate must be bigger than 0");
+  }
+
+  const psbt = new Psbt({ network });
+
+  const psbtOutputs = [
+    {
+      address: fixedAddress,
+      value: amount
+    },
+    {
+      script: scripts.dataEmbedScript,
+      value: 0
+    }
+  ];
+
+  const { selectedUTXOs, fee } = getSpendTxInputUTXOsAndFees(network, inputUTXOs, amount, feeRate, psbtOutputs);
+
+  selectedUTXOs.forEach((input: UTXO) => {
+    psbt.addInput({
+      hash: input.txid,
+      index: input.vout,
+      witnessUtxo: {
+        script: Buffer.from(input.scriptPubKey, "hex"),
+        value: input.value
+      },
+      sequence: 0xfffffffd // Enable locktime by setting the sequence value to (RBF-able)
+    });
+  });
+
+  // Add outputs to the recipient
+  psbt.addOutputs(psbtOutputs);
+
+  // Calculate the change
+  const inputsSum = inputValueSum(selectedUTXOs);
+  const change = inputsSum - (amount + fee);
+
+  // Dynamically decide whether to add a change output
+  if (change > BTC_DUST_SAT) {
+    psbt.addOutput({
+      address: changeAddress,
+      value: change
+    });
+  } else {
+    // Recalculate fee assuming no change output
+    const newFee = fee + change; // Increase the fee by the amount of dust
+    return {
+      psbt,
+      fee: newFee
+    };
+  }
+
+  return {
+    psbt,
+    fee
+  }
+}
+
 
 export function sendTransaction(
   scripts: {
