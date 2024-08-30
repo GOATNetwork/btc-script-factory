@@ -82,41 +82,8 @@ class DepositProtocol {
         }
     }
 
-  async depositTest() {
-    const posPubkey = "70575bad2c61ebec3def3bd6d070da922ad49317710e12277855f8adf2ff1879"
-    // const posPubkey = "0270575bad2c61ebec3def3bd6d070da922ad49317710e12277855f8adf2ff1879"
-    // const posPubkey = "0x0270575bad2c61ebec3def3bd6d070da922ad49317710e12277855f8adf2ff1879"
-    const ethAddress = "0x9139Ee5450fD3B0D07E3A623eE5e3df013BFDEa7";
-    const depositScript = buildDepositScript(
-      ethAddress.startsWith("0x") ?
-        Buffer.from(ethAddress.slice(2), "hex") :
-        Buffer.from(ethAddress, "hex"),
-      Buffer.from(posPubkey, "hex")
-    );
-    const scripts = {
-      depositScript
-    }
-    const changeAddress = "tb1qqkwwqeraapk0jekl53jk5zznp6u0yemjalqk6e"
-
-    console.log('create tx')
-    const { psbt } = depositTransaction(
-      scripts,
-      0.00001,
-      changeAddress,
-      [
-        {
-          "txid": "237bc306996b66d1bf5dfe5dbff9513166265703bb4ef43f26f168843d4b15fc",
-          "vout": 0,
-          "value": 20000,
-          "scriptPubKey": "0014059ce0647de86cf966dfa4656a08530eb8f26772"
-        }
-      ],
-      networks.testnet,
-      15
-    )
-
-    console.log("psbt: ", psbt.toBase64())
-    console.log("hex: ", psbt.toHex())
+  async depositToFixedAddressWithEmbedData() {
+    // todo
   }
 
   async deposit() {
@@ -224,8 +191,6 @@ async function run() {
     let accounts = await initAccount(3);
     let bridgeProtocol = new DepositProtocol(accounts.slice(0));
 
-    bridgeProtocol.depositTest();
-    return
     await bridgeProtocol.check_balance();
     // send token to operator
     /*

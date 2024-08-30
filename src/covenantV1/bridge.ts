@@ -2,7 +2,7 @@ import {
   payments,
   Psbt,
   Transaction,
-  networks,
+  networks
 } from "bitcoinjs-lib";
 
 import { buildDepositScript } from "./bridge.script";
