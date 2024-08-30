@@ -305,7 +305,7 @@ function recaptureTransaction(
   }
   // recapture tx always has 1 output only
   const estimatedFee = getEstimatedFee(feeRate, psbt.txInputs.length, 1);
-  console.log(`estimatedFee ${estimatedFee}, value`, tx.outs[outputIndex].value);
+
   psbt.addOutput({
     address: recaptureAddress,
     value: tx.outs[outputIndex].value - estimatedFee
@@ -496,7 +496,6 @@ export function depositP2PKHTransaction(
   // Add a change output only if there's any amount leftover from the inputs
   const inputsSum = inputValueSum(selectedUTXOs);
   // Check if the change amount is above the dust limit, and if so, add it as a change output
-  // console.log(`${inputsSum} ${amount} ${fee}`);
   if ((inputsSum - (amount + fee)) > BTC_DUST_SAT) {
     psbt.addOutput({
       address: changeAddress,
