@@ -19,10 +19,9 @@ export declare function buildDataEmbedScript(magicBytes: Buffer, evmAddress: Buf
  * Parses a data embedding script.
  * Assumes little-endian byte order for multi-byte values.
  * @param {Buffer} dataEmbedScript - The data embedding script to parse.
- * @return {Object} Parsed data including magicBytes, version, and evmAddress.
+ * @return {Object} Parsed data including magicBytes and evmAddress.
  */
 export declare function parseDataEmbedScript(dataEmbedScript: Buffer): {
     magicBytes: Buffer;
-    version: number;
     evmAddress: Buffer;
 };

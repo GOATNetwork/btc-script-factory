@@ -43,13 +43,9 @@ export function buildDataEmbedScript(magicBytes: Buffer, evmAddress: Buffer): Bu
     throw new Error("evmAddress must be a Buffer of length 20");
   }
 
-  // 1 byte for version, no endian concern for single byte
-  const version = Buffer.alloc(1);
-  version.writeUInt8(0);
-
+  // Serialize data
   const serializedStakingData = Buffer.concat([
     magicBytes, // 4 bytes, endianess not applicable to byte array
-    version, // 1 byte, endianess not relevant
     evmAddress // 20 bytes, endianess not applicable to byte array
   ]);
 
@@ -61,7 +57,7 @@ export function buildDataEmbedScript(magicBytes: Buffer, evmAddress: Buffer): Bu
  * Parses a data embedding script.
  * Assumes little-endian byte order for multi-byte values.
  * @param {Buffer} dataEmbedScript - The data embedding script to parse.
- * @return {Object} Parsed data including magicBytes, version, and evmAddress.
+ * @return {Object} Parsed data including magicBytes and evmAddress.
  */
 export function parseDataEmbedScript(dataEmbedScript: Buffer) {
   const chunks = script.decompile(dataEmbedScript);
@@ -76,12 +72,10 @@ export function parseDataEmbedScript(dataEmbedScript: Buffer) {
   }
 
   const magicBytes = embeddedData.slice(0, 4); // magicBytes
-  const version = embeddedData.readUInt8(4); // version, no endian concern for single byte
-  const evmAddress = embeddedData.slice(5); // evmAddress, endianess not applicable to byte array
+  const evmAddress = embeddedData.slice(4); // evmAddress, endianess not applicable to byte array
 
   return {
     magicBytes,
-    version,
     evmAddress
   };
 }
