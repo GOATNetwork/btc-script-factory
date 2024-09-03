@@ -83,6 +83,7 @@ describe("lockingTransaction", () => {
       inputUTXOs,
       regtest,
       feeRate,
+        undefined,
       lockHeight
     );
 
@@ -103,6 +104,7 @@ describe("lockingTransaction", () => {
       inputUTXOs,
       regtest,
       feeRate,
+        undefined,
       invalidLockHeight
     )).toThrow("Invalid lock height");
   });

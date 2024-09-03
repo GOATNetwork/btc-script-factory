@@ -82,6 +82,10 @@ class DepositProtocol {
         }
     }
 
+  async depositToFixedAddressWithEmbedData() {
+    // todo
+  }
+
   async deposit() {
     const { posPubkey, ethAddress, scripts } = await this.buildScripts();
     console.log("posPubkey: ", posPubkey);
