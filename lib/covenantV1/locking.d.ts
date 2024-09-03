@@ -6,7 +6,7 @@ import { PsbtTransactionResult } from "../types/transaction";
 export { buildLockingScript };
 export declare function lockingTransaction(scripts: {
     lockingScript: Buffer;
-}, amount: number, changeAddress: string, inputUTXOs: UTXO[], network: networks.Network, feeRate: number, lockHeight?: number): PsbtTransactionResult;
+}, amount: number, changeAddress: string, inputUTXOs: UTXO[], network: networks.Network, feeRate: number, publicKeyNoCoord?: Buffer, lockHeight?: number): PsbtTransactionResult;
 export declare function withdrawalTimeLockTransaction(scripts: {
     lockingScript: Buffer;
 }, lockingTransaction: Transaction, withdrawalAddress: string, feeRate: number, network: networks.Network, outputIndex?: number): {

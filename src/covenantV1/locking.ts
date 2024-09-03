@@ -2,6 +2,7 @@ import {
   payments,
   Psbt,
   Transaction,
+  initEccLib,
   networks, address, script
 } from "bitcoinjs-lib";
 
@@ -14,6 +15,9 @@ import { getSpendTxInputUTXOsAndFees, getWithdrawTxFee } from "../utils/feeV1";
 
 export { buildLockingScript };
 
+import * as ecc from "@bitcoin-js/tiny-secp256k1-asmjs";
+initEccLib(ecc);
+
 export function lockingTransaction(
   scripts: {
     lockingScript: Buffer,
@@ -23,6 +27,7 @@ export function lockingTransaction(
   inputUTXOs: UTXO[],
   network: networks.Network,
   feeRate: number,
+  publicKeyNoCoord?: Buffer,
   lockHeight?: number
 ): PsbtTransactionResult {
   // Check that amount and fee are bigger than 0
@@ -58,6 +63,8 @@ export function lockingTransaction(
         script: Buffer.from(input.scriptPubKey, "hex"),
         value: input.value
       },
+      // this is needed only if the wallet is in taproot mode
+      ...(publicKeyNoCoord && { tapInternalKey: publicKeyNoCoord }),
       sequence: 0xfffffffd // Enable locktime by setting the sequence value to (RBF-able)
     });
   });
