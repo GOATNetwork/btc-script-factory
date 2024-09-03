@@ -31,9 +31,9 @@ export function depositTransaction(
   publicKeyNoCoord?: Buffer,
   lockHeight?: number
 ): PsbtTransactionResult {
-  // Check that amount and fee are bigger than 0
-  if (amount <= 0 || feeRate <= 0) {
-    throw new Error("Amount and fee rate must be bigger than 0");
+  // Check that amount and fee rate are non-negative integers greater than 0
+  if (!Number.isInteger(amount) || amount <= 0 || !Number.isInteger(feeRate) || feeRate <= 0) {
+    throw new Error("Amount and fee rate must be non-negative integers greater than 0");
   }
 
   // Check whether the change address is a valid Bitcoin address.
@@ -349,8 +349,9 @@ export function depositP2SHTransaction(
   pubKeys: string[],
   m: number
 ) {
-  if (amount <= 0 || feeRate <= 0) {
-    throw new Error("Amount and fee rate must be bigger than 0");
+  // Check that amount and fee rate are non-negative integers greater than 0
+  if (!Number.isInteger(amount) || amount <= 0 || !Number.isInteger(feeRate) || feeRate <= 0) {
+    throw new Error("Amount and fee rate must be non-negative integers greater than 0");
   }
 
   const numOutputs = scripts.provablyNoteScript? 3 : 2;
@@ -453,9 +454,9 @@ export function depositP2PKHTransaction(
   feeRate: number,
   keyPair: any
 ) {
-  // Check that amount and fee are bigger than 0
-  if (amount <= 0 || feeRate <= 0) {
-    throw new Error("Amount and fee rate must be bigger than 0");
+  // Check that amount and fee rate are non-negative integers greater than 0
+  if (!Number.isInteger(amount) || amount <= 0 || !Number.isInteger(feeRate) || feeRate <= 0) {
+    throw new Error("Amount and fee rate must be non-negative integers greater than 0");
   }
 
   // Calculate the number of outputs based on the presence of the provably note script

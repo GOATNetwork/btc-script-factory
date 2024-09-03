@@ -66,7 +66,7 @@ describe("lockingTransaction", () => {
       inputUTXOs,
       regtest,
       feeRate
-    )).toThrow("Amount and fee rate must be bigger than 0");
+    )).toThrow("Amount and fee rate must be non-negative integers greater than 0");
   });
 
   it("should handle lockHeight correctly", async () => {
@@ -87,7 +87,26 @@ describe("lockingTransaction", () => {
       lockHeight
     );
 
-    expect(result.psbt.txInputs[0].sequence).not.toBe(0xfffffffe); // Assuming locktime was handled
+    expect(result.psbt.txInputs[0].sequence).not.toBe(0xffffffff); // Assuming locktime was handled
+  });
+
+  it("should handle no lockHeight correctly", async () => {
+    const amount = 1e7;
+    const changeAddress = await walletUtils.getAddress();
+    const inputUTXOs = await walletUtils.getUtxos(amount + 1e6);
+    const feeRate = 10;
+
+    const result = lockingTransaction(
+      { lockingScript },
+      amount,
+      changeAddress,
+      inputUTXOs,
+      regtest,
+      feeRate,
+      undefined
+    );
+
+    expect(result.psbt.txInputs[0].sequence).toBe(0xffffffff); // Assuming locktime was handled
   });
 
   it("should throw an error for invalid lock height", async () => {

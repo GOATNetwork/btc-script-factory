@@ -5,14 +5,25 @@ import {
   networks
 } from "bitcoinjs-lib";
 
-import { buildDepositScript } from "./bridge.script";
+import { buildDataEmbedScript, buildDepositScript, parseDataEmbedScript } from "./bridge.script";
 import { UTXO } from "../types/UTXO";
 import { inputValueSum } from "../utils/fee";
 import { BTC_DUST_SAT } from "../constants";
 import { getSpendTxInputUTXOsAndFees } from "../utils/feeV1";
 
-export { buildDepositScript };
+export { buildDepositScript, buildDataEmbedScript, parseDataEmbedScript };
 
+/**
+ * Creates a deposit transaction with the specified parameters.
+ * @param {Object} scripts - The scripts used for the transaction.
+ * @param {Buffer} scripts.depositScript - The deposit script.
+ * @param {number} amount - The amount to deposit in satoshis. Must be a non-negative integer greater than 0.
+ * @param {string} changeAddress - The address to send any change back to.
+ * @param {UTXO[]} inputUTXOs - The list of input UTXOs.
+ * @param {networks.Network} network - The Bitcoin network to use.
+ * @param {number} feeRate - The fee rate in satoshis per byte. Must be a non-negative integer greater than 0.
+ * @return {PsbtTransactionResult} - The PSBT transaction result containing the PSBT and the calculated fee.
+ */
 export function depositTransaction(
   scripts: {
     depositScript: Buffer,
@@ -23,8 +34,9 @@ export function depositTransaction(
   network: networks.Network,
   feeRate: number
 ) {
-  if (amount <= 0 || feeRate <= 0) {
-    throw new Error("Amount and fee rate must be bigger than 0");
+  // Check that amount and fee rate are non-negative integers greater than 0
+  if (!Number.isInteger(amount) || amount <= 0 || !Number.isInteger(feeRate) || feeRate <= 0) {
+    throw new Error("Amount and fee rate must be non-negative integers greater than 0");
   }
 
   const psbt = new Psbt({ network });
@@ -106,8 +118,9 @@ export function depositToFixedAddressTransaction(
   network: networks.Network,
   feeRate: number
 ) {
-  if (amount <= 0 || feeRate <= 0) {
-    throw new Error("Amount and fee rate must be bigger than 0");
+  // Check that amount and fee rate are non-negative integers greater than 0
+  if (!Number.isInteger(amount) || amount <= 0 || !Number.isInteger(feeRate) || feeRate <= 0) {
+    throw new Error("Amount and fee rate must be non-negative integers greater than 0");
   }
 
   const psbt = new Psbt({ network });

@@ -113,7 +113,7 @@ describe("depositTransaction", () => {
       inputUTXOs,
       network,
       feeRate
-    )).toThrow("Amount and fee rate must be bigger than 0");
+    )).toThrow("Amount and fee rate must be non-negative integers greater than 0");
   });
 
   it("should throw an error if the fee rate is zero", async () => {
@@ -129,7 +129,39 @@ describe("depositTransaction", () => {
       inputUTXOs,
       network,
       zeroFeeRate
-    )).toThrow("Amount and fee rate must be bigger than 0");
+    )).toThrow("Amount and fee rate must be non-negative integers greater than 0");
+  });
+
+  it("should throw an error if the fee rate is negative", async () => {
+    const amount = 1e7;
+    const changeAddress = await regtestWalletUtils.getAddress();
+    const inputUTXOs = await regtestWalletUtils.getUtxos(amount + 1e6);
+    const negativeFeeRate = -1; // Invalid fee rate
+
+    expect(() => depositTransaction(
+      { depositScript },
+      amount,
+      changeAddress,
+      inputUTXOs,
+      network,
+      negativeFeeRate
+    )).toThrow("Amount and fee rate must be non-negative integers greater than 0");
+  });
+
+  it("should throw an error if the fee rate is not an integer", async () => {
+    const amount = 1e7;
+    const changeAddress = await regtestWalletUtils.getAddress();
+    const inputUTXOs = await regtestWalletUtils.getUtxos(amount + 1e6);
+    const decimalFeeRate = 1.1; // Invalid fee rate
+
+    expect(() => depositTransaction(
+      { depositScript },
+      amount,
+      changeAddress,
+      inputUTXOs,
+      network,
+      decimalFeeRate
+    )).toThrow("Amount and fee rate must be non-negative integers greater than 0");
   });
 
   it("should correctly calculate change", async () => {
