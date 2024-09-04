@@ -148,12 +148,12 @@ export function sendTransaction(
     { output: scripts.timelockScript }
   ];
 
-  if (minimumFee <= 0) {
-    throw new Error("Minimum fee must be bigger than 0");
+  if (outputIndex < 0 || outputIndex >= depositTransaction.outs.length) {
+    throw new Error("Output index is out of bounds");
   }
 
-  if (outputIndex < 0) {
-    throw new Error("Output index must be bigger or equal to 0");
+  if (minimumFee <= 0) {
+    throw new Error("Minimum fee must be bigger than 0");
   }
 
   const redeem = {
@@ -211,6 +211,10 @@ export function recaptureTransferTimelockTransaction(
     { output: scripts.timelockScript }
   ];
 
+  if (outputIndex < 0 || outputIndex >= tx.outs.length) {
+    throw new Error("Output index is out of bounds");
+  }
+
   return recaptureTransaction(
     scripts,
     scriptTree,
@@ -238,9 +242,8 @@ function recaptureTransaction(
     throw new Error("Recapture feeRate must be bigger than 0");
   }
 
-  // Check that outputIndex is bigger or equal to 0
-  if (outputIndex < 0) {
-    throw new Error("Output index must be bigger or equal to 0");
+  if (outputIndex < 0 || outputIndex >= tx.outs.length) {
+    throw new Error("Output index is out of bounds");
   }
 
   // position of time in the timelock script
@@ -518,6 +521,10 @@ export function sendP2PKHTransaction(
   outputIndex: number = 0
 ): { psbt: Psbt } {
   const psbt = new Psbt({ network });
+
+  if (outputIndex < 0 || outputIndex >= depositTransaction.outs.length) {
+    throw new Error("Output index is out of bounds");
+  }
 
   if (!depositTransaction.outs[outputIndex]) {
     throw new Error("Invalid outputIndex: no such output in the transaction");

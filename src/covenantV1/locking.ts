@@ -65,7 +65,7 @@ export function lockingTransaction(
       },
       // this is needed only if the wallet is in taproot mode
       ...(publicKeyNoCoord && { tapInternalKey: publicKeyNoCoord }),
-      sequence: lockHeight ? 0xfffffffd : 0xffffffff // Enable locktime by setting the sequence value to (RBF-able)
+      sequence: lockHeight ? 0xfffffffe : 0xffffffff // Enable locktime by setting the sequence value to (RBF-able)
     });
   });
 
@@ -189,9 +189,8 @@ export function withdrawalUnbondingTransaction(
     throw new Error("fee rate must be bigger than 0");
   }
 
-  // Check that outputIndex is bigger or equal to 0
-  if (outputIndex < 0) {
-    throw new Error("Output index must be bigger or equal to 0");
+  if (outputIndex < 0 || outputIndex >= lockingTransaction.outs.length) {
+    throw new Error("Output index is out of bounds");
   }
 
   const psbt = new Psbt({ network });
@@ -208,10 +207,6 @@ export function withdrawalUnbondingTransaction(
 
   const estimatedFee = getWithdrawTxFee(feeRate, lockingTransaction.outs[outputIndex].script);
   const outputValue = lockingTransaction.outs[outputIndex].value - estimatedFee;
-
-  if (outputValue < 0) {
-    throw new Error("Output value is smaller than minimum fee");
-  }
 
   if (outputValue < BTC_DUST_SAT) {
     throw new Error("Output value is smaller than dust");

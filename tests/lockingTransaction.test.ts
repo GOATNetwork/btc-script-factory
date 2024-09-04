@@ -87,7 +87,7 @@ describe("lockingTransaction", () => {
       lockHeight
     );
 
-    expect(result.psbt.txInputs[0].sequence).not.toBe(0xffffffff); // Assuming locktime was handled
+    expect(result.psbt.txInputs[0].sequence).toBe(0xfffffffe); // Assuming locktime was handled
   });
 
   it("should handle no lockHeight correctly", async () => {
@@ -238,6 +238,25 @@ describe("withdrawalUnbondingTransaction", () => {
       feeRate,
       regtest,
       invalidOutputIndex
-    )).toThrow("Output index must be bigger or equal to 0");
+    )).toThrow("Output index is out of bounds");
   });
+
+  it("should throw an error for an invalid output index about the length of outputs", async () => {
+    const feeRate = 15;
+    const withdrawalAddress = await walletUtils.getAddress();
+    const mockLockingTransaction = new Transaction();
+    mockLockingTransaction.addOutput(Buffer.from(withdrawalAddress, "hex"), 1e7);
+
+    // Provide an invalid output index
+    const invalidOutputIndex = mockLockingTransaction.outs.length;
+
+    expect(() => withdrawalUnbondingTransaction(
+      { lockingScript },
+      mockLockingTransaction,
+      withdrawalAddress,
+      feeRate,
+      regtest,
+      invalidOutputIndex
+    )).toThrow("Output index is out of bounds");
+  })
 });
