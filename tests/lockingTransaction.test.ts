@@ -87,7 +87,7 @@ describe("lockingTransaction", () => {
       lockHeight
     );
 
-    expect(result.psbt.txInputs[0].sequence).toBe(0xfffffffe); // Assuming locktime was handled
+    expect(result.psbt.txInputs[0].sequence).toBe(0xfffffffd); // Assuming locktime was handled
   });
 
   it("should handle no lockHeight correctly", async () => {
@@ -106,7 +106,7 @@ describe("lockingTransaction", () => {
       undefined
     );
 
-    expect(result.psbt.txInputs[0].sequence).toBe(0xffffffff); // Assuming locktime was handled
+    expect(result.psbt.txInputs[0].sequence).toBe(0xfffffffd); // Assuming locktime was handled
   });
 
   it("should throw an error for invalid lock height", async () => {
