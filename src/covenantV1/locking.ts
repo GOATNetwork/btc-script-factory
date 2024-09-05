@@ -65,7 +65,7 @@ export function lockingTransaction(
       },
       // this is needed only if the wallet is in taproot mode
       ...(publicKeyNoCoord && { tapInternalKey: publicKeyNoCoord }),
-      sequence: lockHeight ? 0xfffffffe : 0xffffffff // Enable locktime by setting the sequence value to (RBF-able)
+      sequence: 0xfffffffd // Enable locktime by setting the sequence value to (RBF-able)
     });
   });
 
