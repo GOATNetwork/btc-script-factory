@@ -1,6 +1,6 @@
 // Import necessary libraries
-import { networks, payments } from "bitcoinjs-lib";
-import { buildDepositScript, depositTransaction } from "../src/covenantV1/bridge";
+import { networks } from "bitcoinjs-lib";
+import { buildDataEmbedScript, parseDataEmbedScript, depositToFixedAddressTransaction } from "../src/covenantV1/bridge";
 import WalletUtils from "./helper/walletUtils";
 import { PsbtTransactionResult } from "../src/types/transaction";
 import { inputValueSum } from "../src/utils/fee";
@@ -9,7 +9,6 @@ import { getSpendTxInputUTXOsAndFees } from "../src/utils/feeV1";
 // jest.setTimeout(30000);
 
 const regtestWalletUtils = new WalletUtils(networks.regtest);
-
 const network = networks.regtest;
 
 // Define this function outside the describe block to be reusable
@@ -45,39 +44,36 @@ const validateCommonFields = (
   }
 };
 
-
-describe("depositTransaction", () => {
-  const posKey = "d6ce14162f3954bac0fff55a12b6df7d614801f358b5d910fe7986a47102e65712";
-  const ownerEvmAddress = "0x2915fd8beebdc822887deceac3dfe1540fac9c81";
-  const evmAddressBuffer = Buffer.from(ownerEvmAddress.slice(2), "hex");
-  const posPubkeyBuffer = Buffer.from(posKey, "hex");
-  const depositScript = buildDepositScript(evmAddressBuffer, posPubkeyBuffer);
+describe("depositToFixedAddressTransaction Tests", () => {
+  const magicBytes = Buffer.from("47545430", "hex");
+  const evmAddress = Buffer.from("2915fd8beebdc822887deceac3dfe1540fac9c81", "hex");
+  const dataEmbedScript = buildDataEmbedScript(magicBytes, evmAddress);
+  const fixedAddress = "bcrt1q25p75p3vv54cpk4cgmt5j3f8zs55lp6as3nyth";
   const feeRate = 15; // Satoshi per byte
 
-  it("should create a valid deposit transaction", async () => {
+  it("should create a valid deposit transaction with data embedding", async () => {
     const amount = 5e7; // 0.5 BTC in Satoshis
     const changeAddress = await regtestWalletUtils.getAddress();
     const inputUTXOs = await regtestWalletUtils.getUtxos(amount + 5e6);
 
     // Build PSBT
-    const { psbt, fee } = depositTransaction(
-      { depositScript },
+    const { psbt, fee } = depositToFixedAddressTransaction(
+      { dataEmbedScript },
       amount,
+      fixedAddress,
       changeAddress,
       inputUTXOs,
       network,
       feeRate
     );
 
-    const p2wsh = payments.p2wsh({
-      redeem: { output: depositScript, network },
-      network
-    });
-
     const psbtOutputs = [{
-      address: p2wsh.address!,
+      address: fixedAddress,
       value: amount
-    }]
+    }, {
+      script: dataEmbedScript,
+      value: 0
+    }];
 
     const { fee: estimatedFee } = getSpendTxInputUTXOsAndFees(network, inputUTXOs, amount, feeRate, psbtOutputs);
 
@@ -85,15 +81,22 @@ describe("depositTransaction", () => {
     validateCommonFields({ psbt, fee }, amount, estimatedFee, changeAddress);
   });
 
+  it("should parse the data embedding script correctly", () => {
+    const parsedData = parseDataEmbedScript(dataEmbedScript);
+    expect(parsedData.magicBytes).toEqual(magicBytes);
+    expect(parsedData.evmAddress).toEqual(evmAddress);
+  });
+
   it("should throw an error if UTXOs are insufficient", async () => {
     const amount = 5e7; // 0.5 BTC in Satoshis
     const changeAddress = await regtestWalletUtils.getAddress();
     const inputUTXOs = await regtestWalletUtils.getUtxos(amount - 1e7); // Not enough to cover the transaction + fee
 
-    expect(() => depositTransaction(
+    expect(() => depositToFixedAddressTransaction(
 
-      { depositScript },
+      { dataEmbedScript },
       amount,
+      fixedAddress,
       changeAddress,
       inputUTXOs,
       network,
@@ -106,9 +109,11 @@ describe("depositTransaction", () => {
     const changeAddress = await regtestWalletUtils.getAddress();
     const inputUTXOs = await regtestWalletUtils.getUtxos(1e7); // Enough for fees but invalid amount
 
-    expect(() => depositTransaction(
-      { depositScript },
+    expect(() => depositToFixedAddressTransaction(
+
+      { dataEmbedScript },
       amount,
+      fixedAddress,
       changeAddress,
       inputUTXOs,
       network,
@@ -122,9 +127,11 @@ describe("depositTransaction", () => {
     const inputUTXOs = await regtestWalletUtils.getUtxos(amount + 1e6);
     const zeroFeeRate = 0; // Invalid fee rate
 
-    expect(() => depositTransaction(
-      { depositScript },
+    expect(() => depositToFixedAddressTransaction(
+
+      { dataEmbedScript },
       amount,
+      fixedAddress,
       changeAddress,
       inputUTXOs,
       network,
@@ -138,9 +145,11 @@ describe("depositTransaction", () => {
     const inputUTXOs = await regtestWalletUtils.getUtxos(amount + 1e6);
     const negativeFeeRate = -1; // Invalid fee rate
 
-    expect(() => depositTransaction(
-      { depositScript },
+    expect(() => depositToFixedAddressTransaction(
+
+      { dataEmbedScript },
       amount,
+      fixedAddress,
       changeAddress,
       inputUTXOs,
       network,
@@ -154,9 +163,11 @@ describe("depositTransaction", () => {
     const inputUTXOs = await regtestWalletUtils.getUtxos(amount + 1e6);
     const decimalFeeRate = 1.1; // Invalid fee rate
 
-    expect(() => depositTransaction(
-      { depositScript },
+    expect(() => depositToFixedAddressTransaction(
+
+      { dataEmbedScript },
       amount,
+      fixedAddress,
       changeAddress,
       inputUTXOs,
       network,
@@ -169,9 +180,10 @@ describe("depositTransaction", () => {
     const changeAddress = await regtestWalletUtils.getAddress();
     const inputUTXOs = await regtestWalletUtils.getUtxos(amount + 1e7); // More than needed to cover fees and amount
 
-    const { psbt, fee } = depositTransaction(
-      { depositScript },
+    const { psbt, fee } = depositToFixedAddressTransaction(
+      { dataEmbedScript },
       amount,
+      fixedAddress,
       changeAddress,
       inputUTXOs,
       network,
@@ -184,4 +196,3 @@ describe("depositTransaction", () => {
     expect(changeOutput!.value).toBeCloseTo(expectedChange, 2);
   });
 });
-

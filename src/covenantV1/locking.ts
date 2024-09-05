@@ -30,9 +30,9 @@ export function lockingTransaction(
   publicKeyNoCoord?: Buffer,
   lockHeight?: number
 ): PsbtTransactionResult {
-  // Check that amount and fee are bigger than 0
-  if (amount <= 0 || feeRate <= 0) {
-    throw new Error("Amount and fee rate must be bigger than 0");
+  // Check that amount and fee rate are non-negative integers greater than 0
+  if (!Number.isInteger(amount) || amount <= 0 || !Number.isInteger(feeRate) || feeRate <= 0) {
+    throw new Error("Amount and fee rate must be non-negative integers greater than 0");
   }
 
   // Check whether the change address is a valid Bitcoin address.
@@ -189,9 +189,8 @@ export function withdrawalUnbondingTransaction(
     throw new Error("fee rate must be bigger than 0");
   }
 
-  // Check that outputIndex is bigger or equal to 0
-  if (outputIndex < 0) {
-    throw new Error("Output index must be bigger or equal to 0");
+  if (outputIndex < 0 || outputIndex >= lockingTransaction.outs.length) {
+    throw new Error("Output index is out of bounds");
   }
 
   const psbt = new Psbt({ network });
@@ -208,10 +207,6 @@ export function withdrawalUnbondingTransaction(
 
   const estimatedFee = getWithdrawTxFee(feeRate, lockingTransaction.outs[outputIndex].script);
   const outputValue = lockingTransaction.outs[outputIndex].value - estimatedFee;
-
-  if (outputValue < 0) {
-    throw new Error("Output value is smaller than minimum fee");
-  }
 
   if (outputValue < BTC_DUST_SAT) {
     throw new Error("Output value is smaller than dust");

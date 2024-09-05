@@ -69,9 +69,9 @@ export function lockingTransaction(
   publicKeyNoCoord?: Buffer,
   lockHeight?: number
 ): PsbtTransactionResult {
-  // Check that amount and fee are bigger than 0
-  if (amount <= 0 || feeRate <= 0) {
-    throw new Error("Amount and fee rate must be bigger than 0");
+  // Check that amount and fee rate are non-negative integers greater than 0
+  if (!Number.isInteger(amount) || amount <= 0 || !Number.isInteger(feeRate) || feeRate <= 0) {
+    throw new Error("Amount and fee rate must be non-negative integers greater than 0");
   }
 
   // Check whether the change address is a valid Bitcoin address.
@@ -303,9 +303,8 @@ function withdrawalTransaction(
     throw new Error("Withdrawal feeRate must be bigger than 0");
   }
 
-  // Check that outputIndex is bigger or equal to 0
-  if (outputIndex < 0) {
-    throw new Error("Output index must be bigger or equal to 0");
+  if (outputIndex < 0 || outputIndex >= tx.outs.length) {
+    throw new Error("Output index is out of bounds");
   }
 
   // position of time in the timelock script
@@ -574,9 +573,8 @@ function slashingTransaction(
     throw new Error("Slashing rate and minimum fee must be bigger than 0");
   }
 
-  // Check that outputIndex is bigger or equal to 0
-  if (outputIndex < 0) {
-    throw new Error("Output index must be bigger or equal to 0");
+  if (outputIndex < 0 || outputIndex >= transaction.outs.length) {
+    throw new Error("Output index is out of bounds");
   }
 
   const redeem = {
@@ -658,9 +656,8 @@ export function unbondingTransaction(
     throw new Error("Unbonding fee must be bigger than 0");
   }
 
-  // Check that outputIndex is bigger or equal to 0
-  if (outputIndex < 0) {
-    throw new Error("Output index must be bigger or equal to 0");
+  if (outputIndex < 0 || outputIndex >= lockingTx.outs.length) {
+    throw new Error("Output index is out of bounds");
   }
 
   // Build input tapleaf script
@@ -803,8 +800,9 @@ export function continueTimelockLockingTransaction(
   if (feeRate <= 0) {
     throw new Error("Withdrawal feeRate must be bigger than 0");
   }
-  if (outputIndex < 0) {
-    throw new Error("Output index must be bigger or equal to 0");
+
+  if (outputIndex < 0 || outputIndex >= tx.outs.length) {
+    throw new Error("Output index is out of bounds");
   }
 
   // position of time in the timelock script
@@ -986,9 +984,8 @@ export function continueUnbondingLockingTransaction(
     throw new Error("Unbonding fee must be bigger than 0");
   }
 
-  // Check that outputIndex is bigger or equal to 0
-  if (outputIndex < 0) {
-    throw new Error("Output index must be bigger or equal to 0");
+  if (outputIndex < 0 || outputIndex >= lockingTx.outs.length) {
+    throw new Error("Output index is out of bounds");
   }
 
   // Build input tapleaf script

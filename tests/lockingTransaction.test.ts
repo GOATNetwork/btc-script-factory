@@ -66,7 +66,7 @@ describe("lockingTransaction", () => {
       inputUTXOs,
       regtest,
       feeRate
-    )).toThrow("Amount and fee rate must be bigger than 0");
+    )).toThrow("Amount and fee rate must be non-negative integers greater than 0");
   });
 
   it("should handle lockHeight correctly", async () => {
@@ -87,7 +87,26 @@ describe("lockingTransaction", () => {
       lockHeight
     );
 
-    expect(result.psbt.txInputs[0].sequence).not.toBe(0xfffffffe); // Assuming locktime was handled
+    expect(result.psbt.txInputs[0].sequence).toBe(0xfffffffd); // Assuming locktime was handled
+  });
+
+  it("should handle no lockHeight correctly", async () => {
+    const amount = 1e7;
+    const changeAddress = await walletUtils.getAddress();
+    const inputUTXOs = await walletUtils.getUtxos(amount + 1e6);
+    const feeRate = 10;
+
+    const result = lockingTransaction(
+      { lockingScript },
+      amount,
+      changeAddress,
+      inputUTXOs,
+      regtest,
+      feeRate,
+      undefined
+    );
+
+    expect(result.psbt.txInputs[0].sequence).toBe(0xfffffffd); // Assuming locktime was handled
   });
 
   it("should throw an error for invalid lock height", async () => {
@@ -219,6 +238,25 @@ describe("withdrawalUnbondingTransaction", () => {
       feeRate,
       regtest,
       invalidOutputIndex
-    )).toThrow("Output index must be bigger or equal to 0");
+    )).toThrow("Output index is out of bounds");
   });
+
+  it("should throw an error for an invalid output index about the length of outputs", async () => {
+    const feeRate = 15;
+    const withdrawalAddress = await walletUtils.getAddress();
+    const mockLockingTransaction = new Transaction();
+    mockLockingTransaction.addOutput(Buffer.from(withdrawalAddress, "hex"), 1e7);
+
+    // Provide an invalid output index
+    const invalidOutputIndex = mockLockingTransaction.outs.length;
+
+    expect(() => withdrawalUnbondingTransaction(
+      { lockingScript },
+      mockLockingTransaction,
+      withdrawalAddress,
+      feeRate,
+      regtest,
+      invalidOutputIndex
+    )).toThrow("Output index is out of bounds");
+  })
 });

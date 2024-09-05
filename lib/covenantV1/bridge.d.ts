@@ -1,8 +1,19 @@
 /// <reference types="node" />
 import { Psbt, Transaction, networks } from "bitcoinjs-lib";
-import { buildDepositScript } from "./bridge.script";
+import { buildDataEmbedScript, buildDepositScript, parseDataEmbedScript } from "./bridge.script";
 import { UTXO } from "../types/UTXO";
-export { buildDepositScript };
+export { buildDepositScript, buildDataEmbedScript, parseDataEmbedScript };
+/**
+ * Creates a deposit transaction with the specified parameters.
+ * @param {Object} scripts - The scripts used for the transaction.
+ * @param {Buffer} scripts.depositScript - The deposit script.
+ * @param {number} amount - The amount to deposit in satoshis. Must be a non-negative integer greater than 0.
+ * @param {string} changeAddress - The address to send any change back to.
+ * @param {UTXO[]} inputUTXOs - The list of input UTXOs.
+ * @param {networks.Network} network - The Bitcoin network to use.
+ * @param {number} feeRate - The fee rate in satoshis per byte. Must be a non-negative integer greater than 0.
+ * @return {PsbtTransactionResult} - The PSBT transaction result containing the PSBT and the calculated fee.
+ */
 export declare function depositTransaction(scripts: {
     depositScript: Buffer;
 }, amount: number, changeAddress: string, inputUTXOs: UTXO[], network: networks.Network, feeRate: number): {
