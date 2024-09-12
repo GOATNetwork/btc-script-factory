@@ -10,7 +10,7 @@ import { buildLockingScript } from "./locking.script";
 import { UTXO } from "../types/UTXO";
 import { inputValueSum } from "../utils/fee";
 import { PsbtTransactionResult } from "../types/transaction";
-import { BTC_DUST_SAT, BTC_LOCKTIME_HEIGHT_TIME_CUTOFF } from "../constants";
+import { BTC_DUST_SAT, BTC_LOCKTIME_HEIGHT_TIME_CUTOFF, ONLY_X_PK_LENGTH } from "../constants";
 import { getSpendTxInputUTXOsAndFees, getWithdrawTxFee } from "../utils/feeV1";
 
 export { buildLockingScript };
@@ -38,6 +38,11 @@ export function lockingTransaction(
   // Check whether the change address is a valid Bitcoin address.
   if (!address.toOutputScript(changeAddress, network)) {
     throw new Error("Invalid change address");
+  }
+
+  // Check whether the public key is valid
+  if (publicKeyNoCoord && publicKeyNoCoord.length !== ONLY_X_PK_LENGTH) {
+    throw new Error("Invalid public key");
   }
 
   const psbt = new Psbt({ network });

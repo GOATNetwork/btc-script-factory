@@ -8,7 +8,7 @@ import {
 import { buildDataEmbedScript, buildDepositScript, parseDataEmbedScript } from "./bridge.script";
 import { UTXO } from "../types/UTXO";
 import { inputValueSum } from "../utils/fee";
-import { BTC_DUST_SAT } from "../constants";
+import { BTC_DUST_SAT, ONLY_X_PK_LENGTH } from "../constants";
 import { getSpendTxInputUTXOsAndFees } from "../utils/feeV1";
 
 export { buildDepositScript, buildDataEmbedScript, parseDataEmbedScript };
@@ -22,6 +22,7 @@ export { buildDepositScript, buildDataEmbedScript, parseDataEmbedScript };
  * @param {UTXO[]} inputUTXOs - The list of input UTXOs.
  * @param {networks.Network} network - The Bitcoin network to use.
  * @param {number} feeRate - The fee rate in satoshis per byte. Must be a non-negative integer greater than 0.
+ * @param {Buffer} [publicKeyNoCoord] - The public key without the co-ordinate.
  * @return {PsbtTransactionResult} - The PSBT transaction result containing the PSBT and the calculated fee.
  */
 export function depositTransaction(
@@ -32,11 +33,17 @@ export function depositTransaction(
   changeAddress: string,
   inputUTXOs: UTXO[],
   network: networks.Network,
-  feeRate: number
+  feeRate: number,
+  publicKeyNoCoord?: Buffer,
 ) {
   // Check that amount and fee rate are non-negative integers greater than 0
   if (!Number.isInteger(amount) || amount <= 0 || !Number.isInteger(feeRate) || feeRate <= 0) {
     throw new Error("Amount and fee rate must be non-negative integers greater than 0");
+  }
+
+  // Check whether the public key is valid
+  if (publicKeyNoCoord && publicKeyNoCoord.length !== ONLY_X_PK_LENGTH) {
+    throw new Error("Invalid public key");
   }
 
   const psbt = new Psbt({ network });
@@ -63,6 +70,8 @@ export function depositTransaction(
         script: Buffer.from(input.scriptPubKey, "hex"),
         value: input.value
       },
+      // this is needed only if the wallet is in taproot mode
+      ...(publicKeyNoCoord && { tapInternalKey: publicKeyNoCoord }),
       sequence: 0xfffffffd // Enable locktime by setting the sequence value to (RBF-able)
     });
   });
@@ -105,6 +114,7 @@ export function depositTransaction(
  * @param {UTXO[]} inputUTXOs - Array of input UTXOs.
  * @param {networks.Network} network - The network to use for the transaction.
  * @param {number} feeRate - The fee rate for the transaction. Must be greater than 0.
+ * @param {Buffer} [publicKeyNoCoord] - The public key without the co-ordinate.
  * @return {Object} - An object containing the PSBT and the calculated fee.
  */
 export function depositToFixedAddressTransaction(
@@ -116,11 +126,17 @@ export function depositToFixedAddressTransaction(
   changeAddress: string,
   inputUTXOs: UTXO[],
   network: networks.Network,
-  feeRate: number
+  feeRate: number,
+  publicKeyNoCoord?: Buffer,
 ) {
   // Check that amount and fee rate are non-negative integers greater than 0
   if (!Number.isInteger(amount) || amount <= 0 || !Number.isInteger(feeRate) || feeRate <= 0) {
     throw new Error("Amount and fee rate must be non-negative integers greater than 0");
+  }
+
+  // Check whether the public key is valid
+  if (publicKeyNoCoord && publicKeyNoCoord.length !== ONLY_X_PK_LENGTH) {
+    throw new Error("Invalid public key");
   }
 
   const psbt = new Psbt({ network });
@@ -146,6 +162,8 @@ export function depositToFixedAddressTransaction(
         script: Buffer.from(input.scriptPubKey, "hex"),
         value: input.value
       },
+      // this is needed only if the wallet is in taproot mode
+      ...(publicKeyNoCoord && { tapInternalKey: publicKeyNoCoord }),
       sequence: 0xfffffffd // Enable locktime by setting the sequence value to (RBF-able)
     });
   });
