@@ -12,11 +12,12 @@ export { buildDepositScript, buildDataEmbedScript, parseDataEmbedScript };
  * @param {UTXO[]} inputUTXOs - The list of input UTXOs.
  * @param {networks.Network} network - The Bitcoin network to use.
  * @param {number} feeRate - The fee rate in satoshis per byte. Must be a non-negative integer greater than 0.
+ * @param {Buffer} [publicKeyNoCoord] - The public key without the co-ordinate.
  * @return {PsbtTransactionResult} - The PSBT transaction result containing the PSBT and the calculated fee.
  */
 export declare function depositTransaction(scripts: {
     depositScript: Buffer;
-}, amount: number, changeAddress: string, inputUTXOs: UTXO[], network: networks.Network, feeRate: number): {
+}, amount: number, changeAddress: string, inputUTXOs: UTXO[], network: networks.Network, feeRate: number, publicKeyNoCoord?: Buffer): {
     psbt: Psbt;
     fee: number;
 };
@@ -30,11 +31,12 @@ export declare function depositTransaction(scripts: {
  * @param {UTXO[]} inputUTXOs - Array of input UTXOs.
  * @param {networks.Network} network - The network to use for the transaction.
  * @param {number} feeRate - The fee rate for the transaction. Must be greater than 0.
+ * @param {Buffer} [publicKeyNoCoord] - The public key without the co-ordinate.
  * @return {Object} - An object containing the PSBT and the calculated fee.
  */
 export declare function depositToFixedAddressTransaction(scripts: {
     dataEmbedScript: Buffer;
-}, amount: number, fixedAddress: string, changeAddress: string, inputUTXOs: UTXO[], network: networks.Network, feeRate: number): {
+}, amount: number, fixedAddress: string, changeAddress: string, inputUTXOs: UTXO[], network: networks.Network, feeRate: number, publicKeyNoCoord?: Buffer): {
     psbt: Psbt;
     fee: number;
 };
