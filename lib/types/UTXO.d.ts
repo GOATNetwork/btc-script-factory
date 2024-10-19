@@ -4,4 +4,5 @@ export interface UTXO {
     value: number;
     scriptPubKey: string;
     rawTransaction?: string;
+    redeemScript?: Buffer;
 }

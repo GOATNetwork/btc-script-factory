@@ -63,7 +63,7 @@ export function depositTransaction(
   const { selectedUTXOs, fee } = getSpendTxInputUTXOsAndFees(network, inputUTXOs, amount, feeRate, psbtOutputs);
 
   selectedUTXOs.forEach((input) => {
-    psbt.addInput({
+    const newInput: any = {
       hash: input.txid,
       index: input.vout,
       witnessUtxo: {
@@ -73,7 +73,14 @@ export function depositTransaction(
       // this is needed only if the wallet is in taproot mode
       ...(publicKeyNoCoord && { tapInternalKey: publicKeyNoCoord }),
       sequence: 0xfffffffd // Enable locktime by setting the sequence value to (RBF-able)
-    });
+    };
+    if (input.redeemScript) {
+      newInput.redeemScript = input.redeemScript;
+    }
+    if (input.rawTransaction) {
+      newInput.nonWitnessUtxo = Buffer.from(input.rawTransaction, "hex");
+    }
+    psbt.addInput(newInput);
   });
 
   // Add outputs to the recipient
@@ -155,7 +162,7 @@ export function depositToFixedAddressTransaction(
   const { selectedUTXOs, fee } = getSpendTxInputUTXOsAndFees(network, inputUTXOs, amount, feeRate, psbtOutputs);
 
   selectedUTXOs.forEach((input: UTXO) => {
-    psbt.addInput({
+    const newInput: any = {
       hash: input.txid,
       index: input.vout,
       witnessUtxo: {
@@ -165,7 +172,14 @@ export function depositToFixedAddressTransaction(
       // this is needed only if the wallet is in taproot mode
       ...(publicKeyNoCoord && { tapInternalKey: publicKeyNoCoord }),
       sequence: 0xfffffffd // Enable locktime by setting the sequence value to (RBF-able)
-    });
+    };
+    if (input.redeemScript) {
+      newInput.redeemScript = input.redeemScript;
+    }
+    if (input.rawTransaction) {
+      newInput.nonWitnessUtxo = Buffer.from(input.rawTransaction, "hex");
+    }
+    psbt.addInput(newInput);
   });
 
   // Add outputs to the recipient
