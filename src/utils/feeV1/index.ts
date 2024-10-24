@@ -90,6 +90,58 @@ export const getSpendTxInputUTXOsAndFees = (
 };
 
 /**
+ * Calculates the spend amount and fee for a transaction given a set of available UTXOs.
+ * The method calculates the total available value, estimates the fee based on available UTXOs,
+ * and subtracts the fee from the total value to determine the spend amount.
+ *
+ * @param {Network} network - The Bitcoin network.
+ * @param {UTXO[]} availableUTXOs - All available UTXOs from the wallet.
+ * @param {number} feeRate - The fee rate in satoshis per byte.
+ * @param {PsbtOutputExtended[]} outputs - The outputs in the transaction.
+ * @return {Object} An object containing the calculated fee and spendAmount.
+ * @throws Will throw an error if the fee cannot be calculated.
+ */
+export const calculateSpendAmountAndFee = (
+  network: Network,
+  availableUTXOs: UTXO[],
+  feeRate: number,
+  outputs: PsbtOutputExtended[]
+): {
+  fee: number;
+  spendAmount: number;
+} => {
+  if (availableUTXOs.length === 0) {
+    throw new Error("No available UTXOs");
+  }
+
+  // Sort UTXOs by value in descending order
+  availableUTXOs.sort((a, b) => b.value - a.value);
+
+  let accumulatedValue = availableUTXOs.reduce((acc, utxo) => acc + utxo.value, 0);
+  let estimatedFee = getEstimatedSize(network, availableUTXOs, outputs) * feeRate;
+
+  // Add additional buffer if there is any change left after spending
+  if (accumulatedValue - estimatedFee > BTC_DUST_SAT) {
+    estimatedFee += getEstimatedChangeOutputSize() * feeRate;
+  }
+
+  if (!estimatedFee) {
+    throw new Error("Unable to calculate fee");
+  }
+
+  const spendAmount = accumulatedValue - estimatedFee;
+
+  if (spendAmount <= 0) {
+    throw new Error("Insufficient funds after calculating fees");
+  }
+
+  return {
+    fee: estimatedFee,
+    spendAmount
+  };
+};
+
+/**
  * Calculates the estimated fee for a withdrawal transaction.
  * The fee calculation is based on estimated constants for input size,
  * output size, and additional overhead specific to withdrawal transactions.

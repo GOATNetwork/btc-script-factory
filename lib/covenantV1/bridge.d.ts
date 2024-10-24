@@ -1,4 +1,3 @@
-/// <reference types="node" />
 import { Psbt, Transaction, networks } from "bitcoinjs-lib";
 import { buildDataEmbedScript, buildDepositScript, parseDataEmbedScript } from "./bridge.script";
 import { UTXO } from "../types/UTXO";
