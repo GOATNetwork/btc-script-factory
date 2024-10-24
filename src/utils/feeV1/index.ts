@@ -20,6 +20,7 @@ import {
   isOP_RETURN
 } from "./utils";
 
+
 /**
  * Selects UTXOs and calculates the fee for a spend transaction.
  * This method selects the highest value UTXOs from all available UTXOs to
@@ -34,9 +35,96 @@ import {
  * @param {number} spendAmount - The amount to spend.
  * @param {number} feeRate - The fee rate in satoshis per byte.
  * @param {PsbtOutputExtended[]} outputs - The outputs in the transaction.
+ * @param {boolean} userFriendly - Whether the function is being called for a user-friendly interface.
  * @return {PsbtTransactionResult} An object containing the selected UTXOs and the fee.
  * @throws Will throw an error if there are insufficient funds or if the fee cannot be calculated.
  */
+const calculateSpendTxInputUTXOsAndFees = (
+  network: Network,
+  availableUTXOs: UTXO[],
+  spendAmount: number,
+  feeRate: number,
+  outputs: PsbtOutputExtended[],
+  userFriendly: boolean = false
+): {
+  selectedUTXOs: UTXO[];
+  fee: number;
+  maxSpendableAmount?: number;
+  spendableAmountAfterFees?: number;
+} => {
+  if (availableUTXOs.length === 0) {
+    if (!userFriendly) {
+      throw new Error("Insufficient funds");
+    }
+    return {
+      selectedUTXOs: [],
+      fee: 0,
+      ...(userFriendly ? { maxSpendableAmount: 0, spendableAmountAfterFees: 0 } : {})
+    };
+  }
+  // Sort available UTXOs from highest to lowest value
+  availableUTXOs.sort((a, b) => b.value - a.value);
+
+  const selectedUTXOs: UTXO[] = [];
+  let accumulatedValue = 0;
+  let estimatedFee = 0;
+  let feeCalculated = false;
+
+  for (const utxo of availableUTXOs) {
+    selectedUTXOs.push(utxo);
+    accumulatedValue += utxo.value;
+
+    // Calculate the fee for the current set of UTXOs and outputs
+    const estimatedSize = getEstimatedSize(network, selectedUTXOs, outputs);
+    estimatedFee = estimatedSize * feeRate + rateBasedTxBufferFee(feeRate);
+
+    // Check if there will be any change left after the spend amount and fee.
+    // If there is, a change output needs to be added, which also comes with an additional fee.
+    if (accumulatedValue - (spendAmount + estimatedFee) > BTC_DUST_SAT) {
+      estimatedFee += getEstimatedChangeOutputSize() * feeRate;
+    }
+
+    if (accumulatedValue >= spendAmount + estimatedFee) {
+      feeCalculated = true;
+      break;
+    }
+  }
+
+  if (!userFriendly && !feeCalculated) {
+    throw new Error(
+      "Insufficient funds: unable to gather enough UTXOs to cover the spend amount and fees"
+    );
+  }
+
+  let maxSpendableAmount = 0;
+  let spendableAmountAfterFees = 0;
+
+  if (!feeCalculated) {
+    // Calculate max spendable amount if all UTXOs are used
+    const estimatedMaxSpendableSize = getEstimatedSize(network, availableUTXOs, outputs);
+    let maxSpendableFee = estimatedMaxSpendableSize * feeRate + rateBasedTxBufferFee(feeRate);
+    if (accumulatedValue - maxSpendableFee > BTC_DUST_SAT) {
+      maxSpendableFee += getEstimatedChangeOutputSize() * feeRate;
+    }
+    maxSpendableAmount = accumulatedValue - maxSpendableFee;
+    estimatedFee = maxSpendableFee;
+    spendableAmountAfterFees = accumulatedValue - estimatedFee;
+  } else {
+    maxSpendableAmount = accumulatedValue - estimatedFee;
+    spendableAmountAfterFees = accumulatedValue - estimatedFee - spendAmount;
+  }
+
+  return {
+    selectedUTXOs,
+    fee: estimatedFee,
+    ...(
+      userFriendly ?
+        { maxSpendableAmount: maxSpendableAmount > 0 ? maxSpendableAmount : 0, spendableAmountAfterFees: spendableAmountAfterFees > 0 ? spendableAmountAfterFees : 0 } :
+        {}
+    )
+  };
+};
+
 export const getSpendTxInputUTXOsAndFees = (
   network: Network,
   availableUTXOs: UTXO[],
@@ -47,46 +135,22 @@ export const getSpendTxInputUTXOsAndFees = (
   selectedUTXOs: UTXO[];
   fee: number;
 } => {
-  if (availableUTXOs.length === 0) {
-    throw new Error("Insufficient funds");
-  }
-  // Sort available UTXOs from highest to lowest value
-  availableUTXOs.sort((a, b) => b.value - a.value);
+  return calculateSpendTxInputUTXOsAndFees(network, availableUTXOs, spendAmount, feeRate, outputs, false);
+};
 
-  const selectedUTXOs: UTXO[] = [];
-  let accumulatedValue = 0;
-  let estimatedFee;
-
-  for (const utxo of availableUTXOs) {
-    selectedUTXOs.push(utxo);
-    accumulatedValue += utxo.value;
-
-    // Calculate the fee for the current set of UTXOs and outputs
-    const estimatedSize = getEstimatedSize(network, selectedUTXOs, outputs);
-    estimatedFee = estimatedSize * feeRate + rateBasedTxBufferFee(feeRate);
-    // Check if there will be any change left after the spend amount and fee.
-    // If there is, a change output needs to be added, which also comes with an additional fee.
-    if (accumulatedValue - (spendAmount + estimatedFee) > BTC_DUST_SAT) {
-      estimatedFee += getEstimatedChangeOutputSize() * feeRate;
-    }
-    if (accumulatedValue >= spendAmount + estimatedFee) {
-      break;
-    }
-  }
-  if (!estimatedFee) {
-    throw new Error("Unable to calculate fee");
-  }
-
-  if (accumulatedValue < spendAmount + estimatedFee) {
-    throw new Error(
-      "Insufficient funds: unable to gather enough UTXOs to cover the spend amount and fees"
-    );
-  }
-
-  return {
-    selectedUTXOs,
-    fee: estimatedFee
-  };
+export const getUserFriendlySpendTxInputUTXOsAndFees = (
+  network: Network,
+  availableUTXOs: UTXO[],
+  spendAmount: number,
+  feeRate: number,
+  outputs: PsbtOutputExtended[]
+): {
+  selectedUTXOs: UTXO[];
+  fee: number;
+  maxSpendableAmount?: number;
+  spendableAmountAfterFees?: number;
+} => {
+  return calculateSpendTxInputUTXOsAndFees(network, availableUTXOs, spendAmount, feeRate, outputs, true);
 };
 
 /**

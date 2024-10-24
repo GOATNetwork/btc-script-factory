@@ -34,6 +34,7 @@
   "devDependencies": {
     "@bitcoin-js/tiny-secp256k1-asmjs": "^2.2.3",
     "@types/jest": "^29.5.12",
+    "@types/node": "^22.7.9",
     "@typescript-eslint/eslint-plugin": "^5.45.0",
     "@typescript-eslint/parser": "^5.45.0",
     "bip32": "^4.0.0",
