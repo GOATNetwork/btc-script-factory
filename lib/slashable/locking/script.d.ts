@@ -1,4 +1,3 @@
-/// <reference types="node" />
 import { LockingScripts } from "../../types/LockingScripts";
 export declare const PK_LENGTH = 32;
 export declare class LockingScriptData {

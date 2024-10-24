@@ -1,4 +1,3 @@
-/// <reference types="node" />
 import { PsbtOutput } from "bip174/src/lib/interfaces";
 export type PsbtOutputExtended = PsbtOutputExtendedAddress | PsbtOutputExtendedScript;
 interface PsbtOutputExtendedAddress extends PsbtOutput {

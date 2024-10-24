@@ -1,4 +1,3 @@
-/// <reference types="node" />
 import { Psbt, Transaction, networks } from "bitcoinjs-lib";
 import { buildLockingScript } from "./locking.script";
 import { UTXO } from "../types/UTXO";

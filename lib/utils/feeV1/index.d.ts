@@ -1,4 +1,3 @@
-/// <reference types="node" />
 import { Network } from "bitcoinjs-lib";
 import { UTXO } from "../../types/UTXO";
 import { PsbtOutputExtended } from "../../types/psbtOutputs";
@@ -22,6 +21,22 @@ import { PsbtOutputExtended } from "../../types/psbtOutputs";
 export declare const getSpendTxInputUTXOsAndFees: (network: Network, availableUTXOs: UTXO[], spendAmount: number, feeRate: number, outputs: PsbtOutputExtended[]) => {
     selectedUTXOs: UTXO[];
     fee: number;
+};
+/**
+ * Calculates the spend amount and fee for a transaction given a set of available UTXOs.
+ * The method calculates the total available value, estimates the fee based on available UTXOs,
+ * and subtracts the fee from the total value to determine the spend amount.
+ *
+ * @param {Network} network - The Bitcoin network.
+ * @param {UTXO[]} availableUTXOs - All available UTXOs from the wallet.
+ * @param {number} feeRate - The fee rate in satoshis per byte.
+ * @param {PsbtOutputExtended[]} outputs - The outputs in the transaction.
+ * @return {Object} An object containing the calculated fee and spendAmount.
+ * @throws Will throw an error if the fee cannot be calculated.
+ */
+export declare const calculateSpendAmountAndFee: (network: Network, availableUTXOs: UTXO[], feeRate: number, outputs: PsbtOutputExtended[]) => {
+    fee: number;
+    spendAmount: number;
 };
 /**
  * Calculates the estimated fee for a withdrawal transaction.

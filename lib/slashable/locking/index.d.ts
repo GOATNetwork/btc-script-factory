@@ -1,4 +1,3 @@
-/// <reference types="node" />
 import { Psbt, Transaction, networks } from "bitcoinjs-lib";
 import { LockingScriptData } from "./script";
 import { PsbtTransactionResult } from "../../types/transaction";

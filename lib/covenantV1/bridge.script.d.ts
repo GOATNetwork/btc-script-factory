@@ -1,4 +1,3 @@
-/// <reference types="node" />
 /**
  * Constructs a deposit script for validating transactions.
  * This script is designed to verify deposits by checking the signature against the user's public key.
