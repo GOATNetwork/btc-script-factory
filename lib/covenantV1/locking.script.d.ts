@@ -9,3 +9,13 @@
  * @return {Buffer}
  */
 export declare function buildLockingScript(evmAddress: Buffer, delegatorKey: Buffer, validatorKey: Buffer, transferTimeLock: number, validatorIndex: Buffer, nonce: Buffer): Buffer;
+/**
+ * Script to validate pre-deposit transactions.
+ * This version only requires validator signature in the ELSE path.
+ * @param {Buffer} evmAddress - The owner's EVM address.
+ * @param {Buffer} lockerKey - The public key of the locker (user).
+ * @param {Buffer} posKey - The public key of the PoS validator.
+ * @param {number} transferTimeLock - The block count for the sequence verification.
+ * @return {Buffer}
+ */
+export declare function buildPreDepositLockingScript(evmAddress: Buffer, lockerKey: Buffer, posKey: Buffer, transferTimeLock: number): Buffer;

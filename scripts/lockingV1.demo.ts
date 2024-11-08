@@ -92,7 +92,7 @@ class LockingProtocol {
       inputUTXOs,
       network,
       feeRate,
-      lockHeight
+      lockHeight as any
     )
 
     const signedLockingPsbtHex = await this.wallet.signPsbt(psbt.toHex());

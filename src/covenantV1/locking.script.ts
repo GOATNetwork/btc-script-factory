@@ -67,3 +67,48 @@ export function buildLockingScript(
     opcodes.OP_ENDIF
   ])
 }
+
+/**
+ * Script to validate pre-deposit transactions.
+ * This version only requires validator signature in the ELSE path.
+ * @param {Buffer} evmAddress - The owner's EVM address.
+ * @param {Buffer} lockerKey - The public key of the locker (user).
+ * @param {Buffer} posKey - The public key of the PoS validator.
+ * @param {number} transferTimeLock - The block count for the sequence verification.
+ * @return {Buffer}
+ */
+export function buildPreDepositLockingScript(
+  evmAddress: Buffer,
+  lockerKey: Buffer,
+  posKey: Buffer,
+  transferTimeLock: number
+): Buffer {
+  if (!Buffer.isBuffer(evmAddress) || !Buffer.isBuffer(lockerKey) || !Buffer.isBuffer(posKey)) {
+    throw new Error("Invalid input types");
+  }
+  if (evmAddress.length !== ETH_PK_LENGTH || lockerKey.length !== PK_LENGTH || posKey.length !== PK_LENGTH) {
+    throw new Error("Invalid input lengths");
+  }
+  if (typeof transferTimeLock !== "number" || transferTimeLock < 0 || transferTimeLock > 65535) {
+    throw new Error("Invalid numeric inputs");
+  }
+
+  const sequence = bip68.encode({ blocks: transferTimeLock });
+
+  return script.compile([
+    opcodes.OP_DUP,
+    evmAddress,
+    opcodes.OP_EQUAL,
+    opcodes.OP_IF,
+      opcodes.OP_DROP,
+      script.number.encode(sequence),
+      opcodes.OP_CHECKSEQUENCEVERIFY,
+      opcodes.OP_DROP,
+      lockerKey,
+      opcodes.OP_CHECKSIG,
+    opcodes.OP_ELSE,
+      posKey,
+      opcodes.OP_CHECKSIG,
+    opcodes.OP_ENDIF
+  ])
+}

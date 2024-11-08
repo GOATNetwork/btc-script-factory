@@ -13,6 +13,7 @@ export declare function withdrawalTimeLockTransaction(scripts: {
 };
 export declare function withdrawalUnbondingTransaction(scripts: {
     lockingScript: Buffer;
+    dataEmbedScript?: Buffer;
 }, lockingTransaction: Transaction, withdrawalAddress: string, feeRate: number, network: networks.Network, outputIndex?: number): {
     psbt: Psbt;
 };

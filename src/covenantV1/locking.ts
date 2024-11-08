@@ -2,7 +2,6 @@ import {
   payments,
   Psbt,
   Transaction,
-  initEccLib,
   networks, address, script
 } from "bitcoinjs-lib";
 
@@ -14,9 +13,6 @@ import { BTC_DUST_SAT, BTC_LOCKTIME_HEIGHT_TIME_CUTOFF, ONLY_X_PK_LENGTH } from 
 import { getSpendTxInputUTXOsAndFees, getWithdrawTxFee } from "../utils/feeV1";
 
 export { buildLockingScript };
-
-import * as ecc from "@bitcoin-js/tiny-secp256k1-asmjs";
-initEccLib(ecc);
 
 export function lockingTransaction(
   scripts: {
@@ -61,7 +57,7 @@ export function lockingTransaction(
   const { selectedUTXOs, fee } = getSpendTxInputUTXOsAndFees(network, inputUTXOs, amount, feeRate, psbtOutputs);
 
   selectedUTXOs.forEach((input) => {
-    psbt.addInput({
+    const newInput: any = {
       hash: input.txid,
       index: input.vout,
       witnessUtxo: {
@@ -71,7 +67,14 @@ export function lockingTransaction(
       // this is needed only if the wallet is in taproot mode
       ...(publicKeyNoCoord && { tapInternalKey: publicKeyNoCoord }),
       sequence: 0xfffffffd // Enable locktime by setting the sequence value to (RBF-able)
-    });
+    };
+    if (input.redeemScript) {
+      newInput.redeemScript = input.redeemScript;
+    }
+    if (input.rawTransaction) {
+      newInput.nonWitnessUtxo = Buffer.from(input.rawTransaction, "hex");
+    }
+    psbt.addInput(newInput);
   });
 
   // Add the locking output to the transaction
@@ -183,6 +186,7 @@ export function withdrawalTimeLockTransaction(
 export function withdrawalUnbondingTransaction(
   scripts: {
     lockingScript: Buffer,
+    dataEmbedScript?: Buffer
   },
   lockingTransaction: Transaction,
   withdrawalAddress: string,
@@ -210,7 +214,7 @@ export function withdrawalUnbondingTransaction(
     witnessScript: scripts.lockingScript // Adding witnessScript here
   });
 
-  const estimatedFee = getWithdrawTxFee(feeRate, lockingTransaction.outs[outputIndex].script);
+  const estimatedFee = getWithdrawTxFee(feeRate, lockingTransaction.outs[outputIndex].script, scripts.dataEmbedScript);
   const outputValue = lockingTransaction.outs[outputIndex].value - estimatedFee;
 
   if (outputValue < BTC_DUST_SAT) {
@@ -221,6 +225,13 @@ export function withdrawalUnbondingTransaction(
     address: withdrawalAddress,
     value: outputValue
   });
+
+  if (scripts.dataEmbedScript) {
+    psbt.addOutput({
+      script: scripts.dataEmbedScript,
+      value: 0
+    });
+  }
 
   return { psbt };
 }
