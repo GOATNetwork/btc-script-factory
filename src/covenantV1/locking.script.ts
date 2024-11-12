@@ -89,10 +89,8 @@ export function buildPreDepositLockingScript(
     throw new Error("Invalid numeric inputs");
   }
 
-  const sequence = bip68.encode({ blocks: transferTimeLock });
-
   return script.compile([
-    script.number.encode(sequence),
+    script.number.encode(transferTimeLock),
     opcodes.OP_CHECKLOCKTIMEVERIFY,
     opcodes.OP_DROP,
     lockerKey,

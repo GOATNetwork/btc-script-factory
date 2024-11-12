@@ -122,7 +122,9 @@ export function withdrawalTimeLockTransaction(
   withdrawalAddress: string,
   feeRate: number,
   network: networks.Network,
-  outputIndex = 0
+  outputIndex = 0,
+  timePosition = 5,
+  currentHeight?: number
 ) {
   if (feeRate <= 0) {
     throw new Error("fee rate must be bigger than 0");
@@ -134,8 +136,8 @@ export function withdrawalTimeLockTransaction(
     throw new Error("Timelock script is not valid");
   }
 
-  // position of time in the timelock script
-  const timePosition = 5;
+  const isAbsoluteTimelock = decompiled.includes(script.OPS.OP_CHECKLOCKTIMEVERIFY);
+
   let timelock = 0;
 
   if (Buffer.isBuffer(decompiled[timePosition])) {
@@ -160,12 +162,12 @@ export function withdrawalTimeLockTransaction(
       value: lockingTransaction.outs[outputIndex].value,
       script: lockingTransaction.outs[outputIndex].script
     },
-    witnessScript: scripts.lockingScript, // Adding witnessScript here
-    sequence: timelock
+    witnessScript: scripts.lockingScript,
+    sequence: isAbsoluteTimelock ? 0xfffffffe : timelock
   });
 
   const estimatedFee = getWithdrawTxFee(feeRate, lockingTransaction.outs[outputIndex].script);
-  const outputValue = lockingTransaction.outs[outputIndex].value - estimatedFee
+  const outputValue = lockingTransaction.outs[outputIndex].value - estimatedFee;
 
   if (outputValue < 0) {
     throw new Error("Output value is smaller than minimum fee");
@@ -179,6 +181,13 @@ export function withdrawalTimeLockTransaction(
     address: withdrawalAddress,
     value: outputValue
   });
+
+  if (isAbsoluteTimelock) {
+    if (!currentHeight) {
+      throw new Error("Current height is required for absolute timelock");
+    }
+    psbt.setLocktime(currentHeight);
+  }
 
   return { psbt };
 }
