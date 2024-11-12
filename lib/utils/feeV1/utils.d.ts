@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import { UTXO } from "../../types/UTXO";
 export declare const isOP_RETURN: (script: Buffer) => boolean;
 /**

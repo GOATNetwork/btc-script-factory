@@ -6,4 +6,6 @@ export interface UTXO {
   scriptPubKey: string;
   rawTransaction?: string;
   redeemScript?: Buffer;
+  witnessScript?: Buffer;
+  sequence?: number;
 }

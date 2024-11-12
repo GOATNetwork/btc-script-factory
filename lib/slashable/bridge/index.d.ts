@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import { Psbt, Transaction, networks } from "bitcoinjs-lib";
 import { BridgeScriptData } from "./script";
 import { PsbtTransactionResult } from "../../types/transaction";

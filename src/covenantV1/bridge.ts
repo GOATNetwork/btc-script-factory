@@ -179,6 +179,12 @@ export function depositToFixedAddressTransaction(
     if (input.rawTransaction) {
       newInput.nonWitnessUtxo = Buffer.from(input.rawTransaction, "hex");
     }
+    if (input.witnessScript) {
+      newInput.witnessScript = input.witnessScript;
+    }
+    if (input.sequence) {
+      newInput.sequence = input.sequence;
+    }
     psbt.addInput(newInput);
   });
 

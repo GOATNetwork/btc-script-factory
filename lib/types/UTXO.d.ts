@@ -1,3 +1,4 @@
+/// <reference types="node" />
 export interface UTXO {
     txid: string;
     vout: number;
@@ -5,4 +6,6 @@ export interface UTXO {
     scriptPubKey: string;
     rawTransaction?: string;
     redeemScript?: Buffer;
+    witnessScript?: Buffer;
+    sequence?: number;
 }
