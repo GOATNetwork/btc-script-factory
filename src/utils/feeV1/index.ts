@@ -150,11 +150,15 @@ export const calculateSpendAmountAndFee = (
  *
  * @param {number} feeRate - The fee rate in satoshis per vbyte.
  * @param {Buffer} script - The scriptPubKey of the output being spent.
+ * @param {Buffer} dataEmbedScript - The script of the data embed output.
  * @return {number} The estimated fee for a withdrawal transaction in satoshis.
  */
-export const getWithdrawTxFee = (feeRate: number, script: Buffer): number => {
+export const getWithdrawTxFee = (feeRate: number, script: Buffer, dataEmbedScript?: Buffer): number => {
   const inputSize = getInputSizeByScript(script);
-  const outputSize = getEstimatedChangeOutputSize();
+  let outputSize = getEstimatedChangeOutputSize();
+  if (dataEmbedScript && isOP_RETURN(dataEmbedScript)) {
+    outputSize += dataEmbedScript.length + OP_RETURN_OUTPUT_VALUE_SIZE + OP_RETURN_VALUE_SERIALIZE_SIZE;
+  }
   return (
     feeRate *
       (inputSize +

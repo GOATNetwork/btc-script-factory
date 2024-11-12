@@ -47,6 +47,7 @@ export declare const calculateSpendAmountAndFee: (network: Network, availableUTX
  *
  * @param {number} feeRate - The fee rate in satoshis per vbyte.
  * @param {Buffer} script - The scriptPubKey of the output being spent.
+ * @param {Buffer} dataEmbedScript - The script of the data embed output.
  * @return {number} The estimated fee for a withdrawal transaction in satoshis.
  */
-export declare const getWithdrawTxFee: (feeRate: number, script: Buffer) => number;
+export declare const getWithdrawTxFee: (feeRate: number, script: Buffer, dataEmbedScript?: Buffer) => number;

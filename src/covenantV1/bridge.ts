@@ -34,7 +34,7 @@ export function depositTransaction(
   inputUTXOs: UTXO[],
   network: networks.Network,
   feeRate: number,
-  publicKeyNoCoord?: Buffer,
+  publicKeyNoCoord?: Buffer
 ) {
   // Check that amount and fee rate are non-negative integers greater than 0
   if (!Number.isInteger(amount) || amount <= 0 || !Number.isInteger(feeRate) || feeRate <= 0) {
@@ -134,7 +134,7 @@ export function depositToFixedAddressTransaction(
   inputUTXOs: UTXO[],
   network: networks.Network,
   feeRate: number,
-  publicKeyNoCoord?: Buffer,
+  publicKeyNoCoord?: Buffer
 ) {
   // Check that amount and fee rate are non-negative integers greater than 0
   if (!Number.isInteger(amount) || amount <= 0 || !Number.isInteger(feeRate) || feeRate <= 0) {

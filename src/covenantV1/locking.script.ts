@@ -67,3 +67,33 @@ export function buildLockingScript(
     opcodes.OP_ENDIF
   ])
 }
+
+/**
+ * Script to validate pre-deposit transactions.
+ * This version only requires validator signature in the ELSE path.
+ * @param {Buffer} lockerKey - The public key of the locker (user).
+ * @param {number} transferTimeLock - The block count for the sequence verification.
+ * @return {Buffer}
+ */
+export function buildPreDepositLockingScript(
+  lockerKey: Buffer,
+  transferTimeLock: number
+): Buffer {
+  if (!Buffer.isBuffer(lockerKey)) {
+    throw new Error("Invalid input types");
+  }
+  if (lockerKey.length !== PK_LENGTH) {
+    throw new Error("Invalid input lengths");
+  }
+  if (typeof transferTimeLock !== "number" || transferTimeLock < 0 || transferTimeLock > 65535) {
+    throw new Error("Invalid numeric inputs");
+  }
+
+  return script.compile([
+    script.number.encode(transferTimeLock),
+    opcodes.OP_CHECKLOCKTIMEVERIFY,
+    opcodes.OP_DROP,
+    lockerKey,
+    opcodes.OP_CHECKSIG
+  ])
+}
