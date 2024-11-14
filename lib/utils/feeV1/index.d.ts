@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import { Network } from "bitcoinjs-lib";
 import { UTXO } from "../../types/UTXO";
 import { PsbtOutputExtended } from "../../types/psbtOutputs";
