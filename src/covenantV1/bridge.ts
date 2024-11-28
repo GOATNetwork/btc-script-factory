@@ -10,6 +10,7 @@ import { UTXO } from "../types/UTXO";
 import { inputValueSum } from "../utils/fee";
 import { BTC_DUST_SAT, ONLY_X_PK_LENGTH } from "../constants";
 import { getSpendTxInputUTXOsAndFees } from "../utils/feeV1";
+import {PsbtOutputExtended} from "../types/psbtOutputs";
 
 export { buildDepositScript, buildDataEmbedScript, parseDataEmbedScript };
 
@@ -133,7 +134,7 @@ export function depositTransaction(
 export function depositToFixedAddressTransaction(
   scripts: {
     dataEmbedScript: Buffer
-  },
+  } | null,
   amount: number,
   fixedAddress: string,
   changeAddress: string,
@@ -154,16 +155,18 @@ export function depositToFixedAddressTransaction(
 
   const psbt = new Psbt({ network });
 
-  const psbtOutputs = [
+  const psbtOutputs: Array<PsbtOutputExtended> = [
     {
       address: fixedAddress,
       value: amount
     },
-    {
+  ];
+  if (scripts) {
+    psbtOutputs.push({
       script: scripts.dataEmbedScript,
       value: 0
-    }
-  ];
+    });
+  }
 
   const { selectedUTXOs, fee } = getSpendTxInputUTXOsAndFees(network, inputUTXOs, amount, feeRate, psbtOutputs);
 
