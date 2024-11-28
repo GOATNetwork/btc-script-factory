@@ -36,7 +36,7 @@ export declare function depositTransaction(scripts: {
  */
 export declare function depositToFixedAddressTransaction(scripts: {
     dataEmbedScript: Buffer;
-}, amount: number, fixedAddress: string, changeAddress: string, inputUTXOs: UTXO[], network: networks.Network, feeRate: number, publicKeyNoCoord?: Buffer): {
+} | null, amount: number, fixedAddress: string, changeAddress: string, inputUTXOs: UTXO[], network: networks.Network, feeRate: number, publicKeyNoCoord?: Buffer): {
     psbt: Psbt;
     fee: number;
 };
